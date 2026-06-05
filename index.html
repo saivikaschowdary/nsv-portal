@@ -501,10 +501,14 @@ async function rPlatformCompanies(){
         </div>
         <span class="badge badge-green">Active</span>
       </div>
-      <div style="display:flex;gap:14px;font-size:0.78rem;color:var(--ink-3);border-top:1px solid var(--border);padding-top:10px">
+      <div style="display:flex;gap:14px;font-size:0.78rem;color:var(--ink-3);border-top:1px solid var(--border);padding-top:10px;margin-bottom:10px">
         <span>👥 ${counts[t.id]} users</span>
         <span>📅 ${new Date(t.created_at).toLocaleDateString()}</span>
         <span style="font-family:monospace;font-size:0.71rem">${t.slug}</span>
+      </div>
+      <div style="display:flex;gap:8px;border-top:1px solid var(--border);padding-top:10px">
+        <button class="btn btn-ghost btn-sm" style="flex:1" onclick="editCompany('${t.id}','${t.name}','${t.hr_email||''}','${t.slug}')">✏️ Edit</button>
+        <button class="btn btn-ghost btn-sm" style="flex:1;color:var(--red)" onclick="deleteCompany('${t.id}','${t.name}')">🗑️ Delete</button>
       </div>
     </div>`).join('')}
   </div>`}`;
