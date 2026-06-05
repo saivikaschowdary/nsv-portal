@@ -608,34 +608,21 @@ async function saveNewCompany(){
   btn.disabled=true; btn.textContent='Creating...';
 
   try {
-    // 1. Create Supabase auth account for the admin
     const tempPw = genTempPw();
-    const { data:sd, error:se } = await sb.auth.signUp({ email:adminEmail, password:tempPw });
-    if(se||!sd?.user){ errEl.textContent=se?.message||'Error creating admin account.'; errEl.style.display='block'; btn.disabled=false; btn.textContent='Create Company & Send Email'; return; }
-
-    const user = sd.user;
     const slug = company.toLowerCase().replace(/[^a-z0-9]/g,'-').replace(/-+/g,'-');
 
-    // 2. Create tenant (company) via security definer function to bypass RLS
+    // 1. Create tenant via security definer function
     const { data:tenantId, error:te } = await sb.rpc('insert_tenant', {
       p_name: company, p_slug: slug, p_hr_email: hrEmail||adminEmail
     });
-
     if(te){ errEl.textContent='Error creating company: '+te.message; errEl.style.display='block'; btn.disabled=false; btn.textContent='Create Company & Send Email'; return; }
 
-    // Fetch the created tenant
-    const { data:tenant } = await sb.from('tenants').select('*').eq('id', tenantId).single();
-
-    if(!tenant){ errEl.textContent='Error fetching created company.'; errEl.style.display='block'; btn.disabled=false; btn.textContent='Create Company & Send Email'; return; }
-
-    // 3. Create admin profile — must_change_pw = true (forced password change on first login)
-    await sb.from('profiles').insert({
-      id: user.id, tenant_id: tenant.id, role: 'admin',
-      full_name: adminName, email: adminEmail,
-      username: adminName.toLowerCase().replace(/\s+/g,'.'),
-      must_change_pw: true,
-      profile_complete: true
+    // 2. Create admin user via security definer (does not hijack session)
+    const { error:ue } = await sb.rpc('create_user_for_tenant', {
+      p_email: adminEmail, p_password: tempPw,
+      p_full_name: adminName, p_role: 'admin', p_tenant_id: tenantId
     });
+    if(ue){ errEl.textContent='Error creating admin: '+ue.message; errEl.style.display='block'; btn.disabled=false; btn.textContent='Create Company & Send Email'; return; }
 
     // 4. Seed default departments
     await sb.from('departments').insert([
@@ -912,7 +899,7 @@ async function saveEmployee(){
   const errEl=document.getElementById('ae-err');
   if(!name||!email){errEl.textContent='Name and email required.';errEl.style.display='block';return;}
   const tempPw=genTempPw();
-  const {data:sd,error:se}=await sb.auth.signUp({email,password:tempPw});
+  const {data:{user:eu},error:se}=await sb.rpc('create_user_for_tenant',{p_email:email,p_password:tempPw,p_full_name:name,p_role:'employee',p_tenant_id:tid()}).then(r=>({data:{user:{id:r.data}},error:r.error}));
   if(se||!sd?.user){errEl.textContent=se?.message||'Error';errEl.style.display='block';return;}
   await sb.from('profiles').insert({id:sd.user.id,tenant_id:tid(),role:'employee',full_name:name,email,username:name.toLowerCase().replace(/\s+/g,'.'),must_change_pw:true,profile_complete:false});
   const {data:emp}=await sb.from('employees').insert({tenant_id:tid(),profile_id:sd.user.id,job_title:document.getElementById('ae-title').value.trim(),department_id:document.getElementById('ae-dept').value||null,manager_id:document.getElementById('ae-mgr').value||null,status:document.getElementById('ae-status').value}).select().single();
@@ -1018,7 +1005,7 @@ async function saveUser(role){
   const errEl=document.getElementById('au-err');
   if(!name||!email){errEl.textContent='Name and email required.';errEl.style.display='block';return;}
   const tempPw=genTempPw();
-  const {data:sd,error}=await sb.auth.signUp({email,password:tempPw});
+  const {data:{user:mu},error}=await sb.rpc('create_user_for_tenant',{p_email:email,p_password:tempPw,p_full_name:name,p_role:role,p_tenant_id:tid()}).then(r=>({data:{user:{id:r.data}},error:r.error}));
   if(error||!sd?.user){errEl.textContent=error?.message||'Error';errEl.style.display='block';return;}
   await sb.from('profiles').insert({id:sd.user.id,tenant_id:tid(),role,full_name:name,email,username:name.toLowerCase().replace(/\s+/g,'.'),must_change_pw:true,profile_complete:false});
   if(role==='manager'){await sb.from('managers').insert({tenant_id:tid(),profile_id:sd.user.id});}
