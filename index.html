@@ -665,7 +665,8 @@ async function saveNewCompany(){
 // ════════════════════════════════════════════════════════════
 // WELCOME EMAIL
 // ════════════════════════════════════════════════════════════
-function sendWelcomeEmail(toEmail, toName, companyName, tempPw, role){
+function sendWelcomeEmail(toEmail, toName, companyName, tempPw, role, slug){
+  const portalLink = slug ? `${PORTAL_URL}?company=${slug}` : PORTAL_URL;
   const subject = encodeURIComponent(`Welcome to ${companyName} — Your ${role} Portal Access`);
   const body = encodeURIComponent(
 `Hi ${toName},
@@ -673,7 +674,7 @@ function sendWelcomeEmail(toEmail, toName, companyName, tempPw, role){
 Your ${role} account has been set up on the NSV Employee Management Platform for ${companyName}.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
-PORTAL LINK: ${PORTAL_URL}
+PORTAL LINK: ${portalLink}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 LOGIN CREDENTIALS
@@ -693,7 +694,7 @@ If you have any questions, reply to this email.
 
 Best regards,
 NSV Platform
-${PORTAL_URL}`
+${portalLink}`
   );
   window.open(`mailto:${toEmail}?subject=${subject}&body=${body}`);
 }
@@ -919,7 +920,7 @@ async function saveEmployee(){
   const vt=document.getElementById('ae-visa').value;
   if(vt&&emp){await sb.from('visa_details').insert({tenant_id:tid(),employee_id:emp.id,visa_type:vt,visa_expiry_date:document.getElementById('ae-vexp').value||null});}
   closeModal();
-  sendWelcomeEmail(email, name, currentTenant?.name||'your company', tempPw, 'Employee');
+  sendWelcomeEmail(email, name, currentTenant?.name||'your company', tempPw, 'Employee', currentTenant?.slug);
   showToast(`✓ Employee account created. Welcome email prepared for ${name}.`);
   navigate('employees');
 }
@@ -1023,7 +1024,7 @@ async function saveUser(role){
   await sb.from('profiles').insert({id:sd.user.id,tenant_id:tid(),role,full_name:name,email,username:name.toLowerCase().replace(/\s+/g,'.'),must_change_pw:true,profile_complete:false});
   if(role==='manager'){await sb.from('managers').insert({tenant_id:tid(),profile_id:sd.user.id});}
   closeModal();
-  sendWelcomeEmail(email,name,currentTenant?.name||'your company',tempPw,role==='admin'?'Admin / HR':'Manager');
+  sendWelcomeEmail(email,name,currentTenant?.name||'your company',tempPw,role==='admin'?'Admin / HR':'Manager',currentTenant?.slug);
   showToast(`✓ ${role} account created. Welcome email prepared for ${name}.`);
   navigate('users');
 }
