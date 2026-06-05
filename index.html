@@ -508,10 +508,10 @@ window.confirmDeleteCompany = async function(id, name){
   const typed = document.getElementById('dc-confirm').value.trim();
   const errEl = document.getElementById('dc-error');
   if(typed !== name){ errEl.textContent='Company name does not match.'; errEl.style.display='block'; return; }
-  const { error } = await sb.from('tenants').delete().eq('id', id);
+  const { error } = await sb.rpc('delete_tenant_and_users', { p_tenant_id: id });
   if(error){ errEl.textContent='Error: '+error.message; errEl.style.display='block'; return; }
   closeModal();
-  showToast('✓ Company deleted');
+  showToast('✓ Company and all users deleted');
   platformNav('companies');
 };
 
