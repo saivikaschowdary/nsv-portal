@@ -134,7 +134,7 @@ tr:hover td{background:var(--surface)}
     <div class="auth-card">
       <div class="brand">
         <div class="brand-logo"><svg viewBox="0 0 24 24" fill="none" stroke="#2d4a3e" stroke-width="2" width="16" height="16"><path d="M9 7v10M9 12h6M15 7v10"/></svg></div>
-        <div><h1 id="auth-brand-name">NSV</h1><span>Employee Management Platform</span></div>
+        <div><h1 id="login-company-name">NSV</h1><span id="login-company-subtitle">Employee Management Platform</span></div>
       </div>
       <h2 style="font-family:'DM Serif Display',serif;font-size:1.35rem;font-weight:400;margin-bottom:4px">Sign In</h2>
       <p style="font-size:0.81rem;color:var(--ink-3);margin-bottom:18px">Enter your credentials to access the dashboard.</p>
@@ -340,6 +340,19 @@ function goToPortal(type){
 // ════════════════════════════════════════════════════════════
 async function init(){
   if(!sb){ showScreen('screen-auth'); return; }
+
+  // Show company name on login page from URL ?company= parameter
+  const params = new URLSearchParams(window.location.search);
+  const slug = params.get('company');
+  if(slug){
+    const { data:tenant } = await sb.from('tenants').select('name,primary_color').eq('slug', slug).maybeSingle();
+    if(tenant){
+      const titleEl = document.getElementById('login-company-name');
+      if(titleEl) titleEl.textContent = tenant.name;
+      if(tenant.primary_color) document.documentElement.style.setProperty('--accent', tenant.primary_color);
+    }
+  }
+
   const { data:{ session } } = await sb.auth.getSession();
   if(session) await loadUserContext(session.user);
   else showScreen('screen-auth');
