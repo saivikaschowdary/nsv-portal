@@ -557,12 +557,17 @@ async function saveNewCompany(){
     const user = sd.user;
     const slug = company.toLowerCase().replace(/[^a-z0-9]/g,'-').replace(/-+/g,'-');
 
-    // 2. Create tenant (company)
-    const { data:tenant, error:te } = await sb.from('tenants').insert({
-      name: company, slug, hr_email: hrEmail||adminEmail
-    }).select().single();
+    // 2. Create tenant (company) via security definer function to bypass RLS
+    const { data:tenantId, error:te } = await sb.rpc('insert_tenant', {
+      p_name: company, p_slug: slug, p_hr_email: hrEmail||adminEmail
+    });
 
     if(te){ errEl.textContent='Error creating company: '+te.message; errEl.style.display='block'; btn.disabled=false; btn.textContent='Create Company & Send Email'; return; }
+
+    // Fetch the created tenant
+    const { data:tenant } = await sb.from('tenants').select('*').eq('id', tenantId).single();
+
+    if(!tenant){ errEl.textContent='Error fetching created company.'; errEl.style.display='block'; btn.disabled=false; btn.textContent='Create Company & Send Email'; return; }
 
     // 3. Create admin profile — must_change_pw = true (forced password change on first login)
     await sb.from('profiles').insert({
