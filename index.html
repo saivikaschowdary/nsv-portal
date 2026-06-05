@@ -352,7 +352,7 @@ async function init(){
 
 async function loadUserContext(user){
   currentUser = user;
-  const { data:profile } = await sb.from('profiles').select('*,tenants(*)').eq('id', user.id).maybeSingle();
+  const { data:profile } = await sb.from('profiles').select('*,tenants(*)').eq('id', user.id).single();
 
   // Platform admin — special view
   if(user.email === PLATFORM_ADMIN_EMAIL && (!profile || profile.role==='platform_admin')){
