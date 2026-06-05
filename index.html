@@ -461,6 +461,60 @@ async function doSaveProfile(){
 // ════════════════════════════════════════════════════════════
 // ★ PLATFORM ADMIN DASHBOARD (Saivikas only)
 // ════════════════════════════════════════════════════════════
+
+window.editCompany = async function(id, name, hrEmail, slug){
+  showModal(`
+  <div class="modal-header"><h3>Edit Company</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    <div class="form-group"><label>Company Name *</label><input id="ec-name" value="${name}"></div>
+    <div class="form-group"><label>HR Email</label><input id="ec-hr-email" type="email" value="${hrEmail}"></div>
+    <div id="ec-error" style="display:none;background:var(--red-light);border-radius:8px;padding:9px 12px;font-size:0.79rem;color:var(--red);margin-top:12px"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="window.saveEditCompany('${id}')">Save Changes</button>
+  </div>`);
+};
+
+window.saveEditCompany = async function(id){
+  const name = document.getElementById('ec-name').value.trim();
+  const hrEmail = document.getElementById('ec-hr-email').value.trim();
+  const errEl = document.getElementById('ec-error');
+  if(!name){ errEl.textContent='Company name is required.'; errEl.style.display='block'; return; }
+  const { error } = await sb.from('tenants').update({ name, hr_email: hrEmail }).eq('id', id);
+  if(error){ errEl.textContent='Error: '+error.message; errEl.style.display='block'; return; }
+  closeModal();
+  showToast('✓ Company updated successfully');
+  platformNav('companies');
+};
+
+window.deleteCompany = async function(id, name){
+  showModal(`
+  <div class="modal-header"><h3>Delete Company</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    <div style="background:var(--red-light);border-radius:9px;padding:14px;color:var(--red);font-size:0.85rem;margin-bottom:14px">
+      ⚠️ This will permanently delete <strong>${name}</strong> and all its data. This cannot be undone.
+    </div>
+    <div class="form-group"><label>Type the company name to confirm</label><input id="dc-confirm" placeholder="${name}"></div>
+    <div id="dc-error" style="display:none;background:var(--red-light);border-radius:8px;padding:9px 12px;font-size:0.79rem;color:var(--red);margin-top:12px"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" style="background:var(--red)" onclick="window.confirmDeleteCompany('${id}','${name}')">Delete Permanently</button>
+  </div>`);
+};
+
+window.confirmDeleteCompany = async function(id, name){
+  const typed = document.getElementById('dc-confirm').value.trim();
+  const errEl = document.getElementById('dc-error');
+  if(typed !== name){ errEl.textContent='Company name does not match.'; errEl.style.display='block'; return; }
+  const { error } = await sb.from('tenants').delete().eq('id', id);
+  if(error){ errEl.textContent='Error: '+error.message; errEl.style.display='block'; return; }
+  closeModal();
+  showToast('✓ Company deleted');
+  platformNav('companies');
+};
+
 async function platformNav(page){
   document.querySelectorAll('[id^="pnav-"]').forEach(e=>e.classList.remove('active'));
   document.getElementById('pnav-'+page)?.classList.add('active');
