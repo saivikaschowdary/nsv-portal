@@ -880,7 +880,7 @@ async function saveEditEmployee(empId){
 
 async function deleteEmployee(userId){
   if(!confirm('Delete this employee? This cannot be undone.'))return;
-  await sb.from('profiles').delete().eq('id',userId);
+  await sb.rpc('delete_user', { p_user_id: userId });
   closeModal();showToast('Employee deleted.');navigate('employees');
 }
 
