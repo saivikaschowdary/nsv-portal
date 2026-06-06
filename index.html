@@ -913,10 +913,9 @@ async function saveEmployee(){
   const errEl=document.getElementById('ae-err');
   if(!name||!email){errEl.textContent='Name and email required.';errEl.style.display='block';return;}
   const tempPw=genTempPw();
-  const {data:{user:eu},error:se}=await sb.rpc('create_user_for_tenant',{p_email:email,p_password:tempPw,p_full_name:name,p_role:'employee',p_tenant_id:tid()}).then(r=>({data:{user:{id:r.data}},error:r.error}));
-  if(se||!sd?.user){errEl.textContent=se?.message||'Error';errEl.style.display='block';return;}
-  await sb.from('profiles').insert({id:sd.user.id,tenant_id:tid(),role:'employee',full_name:name,email,username:name.toLowerCase().replace(/\s+/g,'.'),must_change_pw:true,profile_complete:false});
-  const {data:emp}=await sb.from('employees').insert({tenant_id:tid(),profile_id:sd.user.id,job_title:document.getElementById('ae-title').value.trim(),department_id:document.getElementById('ae-dept').value||null,manager_id:document.getElementById('ae-mgr').value||null,status:document.getElementById('ae-status').value}).select().single();
+  const {data:newUserId,error:se}=await sb.rpc('create_user_for_tenant',{p_email:email,p_password:tempPw,p_full_name:name,p_role:'employee',p_tenant_id:tid()});
+  if(se||!newUserId){errEl.textContent=se?.message||'Error creating user';errEl.style.display='block';return;}
+  const {data:emp}=await sb.from('employees').insert({tenant_id:tid(),profile_id:newUserId,job_title:document.getElementById('ae-title').value.trim(),department_id:document.getElementById('ae-dept').value||null,manager_id:document.getElementById('ae-mgr').value||null,status:document.getElementById('ae-status').value}).select().single();
   const vt=document.getElementById('ae-visa').value;
   if(vt&&emp){await sb.from('visa_details').insert({tenant_id:tid(),employee_id:emp.id,visa_type:vt,visa_expiry_date:document.getElementById('ae-vexp').value||null});}
   closeModal();
@@ -1019,9 +1018,9 @@ async function saveUser(role){
   const errEl=document.getElementById('au-err');
   if(!name||!email){errEl.textContent='Name and email required.';errEl.style.display='block';return;}
   const tempPw=genTempPw();
-  const {data:{user:mu},error}=await sb.rpc('create_user_for_tenant',{p_email:email,p_password:tempPw,p_full_name:name,p_role:role,p_tenant_id:tid()}).then(r=>({data:{user:{id:r.data}},error:r.error}));
-  if(error||!sd?.user){errEl.textContent=error?.message||'Error';errEl.style.display='block';return;}
-  await sb.from('profiles').insert({id:sd.user.id,tenant_id:tid(),role,full_name:name,email,username:name.toLowerCase().replace(/\s+/g,'.'),must_change_pw:true,profile_complete:false});
+  const {data:newUserId,error}=await sb.rpc('create_user_for_tenant',{p_email:email,p_password:tempPw,p_full_name:name,p_role:role,p_tenant_id:tid()});
+  if(error||!newUserId){errEl.textContent=error?.message||'Error';errEl.style.display='block';return;}
+  await sb.from('profiles').insert({id:newUserId,tenant_id:tid(),role,full_name:name,email,username:name.toLowerCase().replace(/\s+/g,'.'),must_change_pw:true,profile_complete:false});
   if(role==='manager'){await sb.from('managers').insert({tenant_id:tid(),profile_id:sd.user.id});}
   closeModal();
   sendWelcomeEmail(email,name,currentTenant?.name||'your company',tempPw,role==='admin'?'Admin / HR':'Manager',currentTenant?.slug);
