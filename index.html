@@ -528,6 +528,24 @@ window.confirmDeleteCompany = async function(id, name){
   platformNav('companies');
 };
 
+
+window.deleteUserAccount = async function(userId){
+  if(!confirm('Delete this user? This cannot be undone.'))return;
+  const { error } = await sb.rpc('delete_user', { p_user_id: userId });
+  if(error){ showToast('Error: '+error.message); return; }
+  showToast('User deleted.');
+  navigate('users');
+};
+
+window.deleteEmployee = async function(userId){
+  if(!confirm('Delete this employee? This cannot be undone.'))return;
+  const { error } = await sb.rpc('delete_user', { p_user_id: userId });
+  if(error){ showToast('Error: '+error.message); return; }
+  closeModal();
+  showToast('Employee deleted.');
+  navigate('employees');
+};
+
 async function platformNav(page){
   document.querySelectorAll('[id^="pnav-"]').forEach(e=>e.classList.remove('active'));
   document.getElementById('pnav-'+page)?.classList.add('active');
