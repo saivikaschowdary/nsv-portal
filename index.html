@@ -1124,7 +1124,7 @@ async function doEmpPortalLogin(){
 }
 
 async function renderEmployeeDashboard(){
-  const {data:emp}=await sb.from('v_employee_profile').select('*').eq('user_id',currentUser.id).single();
+  const {data:emp}=await sb.from('v_employee_profile').select('*').eq('user_id',currentUser.id).maybeSingle();
   const {data:revs}=await sb.from('reviews').select('*').eq('employee_id',emp?.employee_id||'').order('review_date',{ascending:false}).limit(10);
   const ini=(emp?.full_name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
 
@@ -1135,38 +1135,122 @@ async function renderEmployeeDashboard(){
         <div><span class="badge badge-${r.period==='Weekly'?'blue':'gray'}">${r.period}</span> ${r.self_submitted?'<span class="badge badge-green" style="margin-left:3px">Self</span>':''} <span class="badge badge-${r.status==='Approved'?'green':'amber'}" style="margin-left:3px">${r.status}</span><div style="font-size:0.71rem;color:var(--ink-3);margin-top:3px">${r.review_date}</div></div>
         <div style="text-align:right"><div style="font-family:'DM Serif Display',serif;font-size:1.6rem;color:var(--accent);line-height:1">${avg}</div><div style="font-size:0.65rem;color:var(--ink-3)">/5</div></div>
       </div>
-      ${r.manager_comment?`<div style="background:var(--accent-light);border-radius:7px;padding:8px 10px;font-size:0.78rem;color:var(--accent)">💬 ${r.manager_comment}</div>`:''}
+      ${r.manager_comment?`<div style="background:var(--accent-light);border-radius:7px;padding:8px 10px;font-size:0.78rem;color:var(--accent)">\u{1F4AC} ${r.manager_comment}</div>`:''}
     </div>`;
   }).join('');
 
   document.getElementById('emp-portal-content').innerHTML=`
-  <div style="background:var(--ink);border-radius:14px;padding:14px 18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">
-    <div style="display:flex;align-items:center;gap:9px"><div style="width:26px;height:26px;background:var(--accent-light);border-radius:50%;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" fill="none" stroke="#2d4a3e" stroke-width="2" width="13" height="13"><path d="M9 7v10M9 12h6M15 7v10"/></svg></div><span style="font-family:'DM Serif Display',serif;color:#fff;font-size:0.93rem">${currentTenant?.name||'NSV'}</span><span style="font-size:0.62rem;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.08em">Employee Portal</span></div>
-    <button onclick="doSignOut()" style="font-size:0.75rem;color:rgba(255,255,255,0.3);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif">Sign Out</button>
+  <div style="background:var(--ink);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100">
+    <div style="display:flex;align-items:center;gap:9px">
+      <div style="width:26px;height:26px;background:var(--accent-light);border-radius:50%;display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 24 24" fill="none" stroke="#2d4a3e" stroke-width="2" width="13" height="13"><path d="M9 7v10M9 12h6M15 7v10"/></svg></div>
+      <span style="font-family:'DM Serif Display',serif;color:#fff;font-size:0.93rem">${currentTenant?.name||'NSV'}</span>
+      <span style="font-size:0.62rem;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.08em">Employee Portal</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:0.78rem;color:rgba(255,255,255,0.5)">${emp?.full_name||''}</span>
+      <button onclick="doSignOut()" style="font-size:0.75rem;color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:4px 10px;cursor:pointer;font-family:'DM Sans',sans-serif">Sign Out</button>
+    </div>
   </div>
-  <div class="portal-card" style="margin-bottom:12px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div class="avatar" style="background:#2d4a3e;width:44px;height:44px;font-size:1rem">${ini}</div>
-        <div><div style="font-size:0.98rem;font-weight:500">${emp?.full_name||''}</div><div style="font-size:0.77rem;color:var(--ink-3)">${emp?.job_title||''}${emp?.department_name?' · '+emp.department_name:''}</div></div>
+  <div style="max-width:800px;margin:0 auto;padding:24px 16px">
+    <div class="card card-padded" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div class="avatar" style="background:var(--accent);width:52px;height:52px;font-size:1.1rem;color:#fff">${ini}</div>
+          <div>
+            <div style="font-size:1.1rem;font-weight:600;font-family:'DM Serif Display',serif">${emp?.full_name||''}</div>
+            <div style="font-size:0.8rem;color:var(--ink-3);margin-top:2px">${emp?.job_title||'—'} · ${emp?.department_name||'—'}</div>
+            <div style="font-size:0.75rem;color:var(--ink-3);margin-top:1px">${emp?.email||''}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${sBadge(emp?.status||'Active')}
+          <button class="btn btn-primary btn-sm" onclick="window.openEditMyProfile()">Edit Profile</button>
+        </div>
       </div>
-      ${sBadge(emp?.status||'Active')}
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;font-size:0.81rem">
+        <div style="background:var(--surface-2);border-radius:8px;padding:11px"><div style="font-size:0.63rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);margin-bottom:3px">Manager</div><div style="font-weight:500">${emp?.manager_name||'—'}</div></div>
+        <div style="background:var(--surface-2);border-radius:8px;padding:11px"><div style="font-size:0.63rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);margin-bottom:3px">Work Mode</div><div style="font-weight:500">${emp?.work_mode||'—'}</div></div>
+        <div style="background:var(--surface-2);border-radius:8px;padding:11px"><div style="font-size:0.63rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);margin-bottom:3px">Join Date</div><div style="font-weight:500">${emp?.join_date||'—'}</div></div>
+        <div style="background:var(--surface-2);border-radius:8px;padding:11px"><div style="font-size:0.63rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);margin-bottom:3px">Working Hours</div><div style="font-weight:500">${emp?.working_hours||'—'}</div></div>
+      </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;font-size:0.79rem">
-      <div style="background:var(--surface-2);border-radius:8px;padding:10px"><div style="font-size:0.63rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);margin-bottom:2px">Manager</div><div style="font-weight:500">${emp?.manager_name||'—'}</div></div>
-      <div style="background:var(--surface-2);border-radius:8px;padding:10px"><div style="font-size:0.63rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);margin-bottom:2px">Project</div><div style="font-weight:500;font-size:0.76rem">${emp?.current_project||'Unassigned'}</div></div>
-      <div style="background:var(--surface-2);border-radius:8px;padding:10px"><div style="font-size:0.63rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);margin-bottom:2px">Visa</div><div style="font-weight:500;color:${(emp?.days_until_visa_expiry||999)<90?'var(--red)':'var(--ink)'}">${emp?.visa_type||'—'}</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+      <div class="card card-padded">
+        <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:10px">Current Project</div>
+        <div style="font-weight:600;font-size:0.92rem;margin-bottom:4px">${emp?.current_project||'Unassigned'}</div>
+        <div style="font-size:0.78rem;color:var(--ink-3);margin-bottom:8px">${emp?.current_client||''}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${emp?.project_start?`<span style="background:var(--accent-light);color:var(--accent);padding:2px 8px;border-radius:20px;font-size:0.7rem">Start: ${emp.project_start}</span>`:''}
+          ${emp?.project_end?`<span style="background:var(--amber-light);color:var(--amber);padding:2px 8px;border-radius:20px;font-size:0.7rem">End: ${emp.project_end}</span>`:''}
+        </div>
+      </div>
+      <div class="card card-padded">
+        <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:10px">Visa Status</div>
+        ${emp?.visa_type?`<div style="font-weight:600;font-size:0.92rem;margin-bottom:4px">${emp.visa_type}</div><div style="font-size:0.78rem;color:var(--ink-3);margin-bottom:6px">Expires: ${emp.visa_expiry_date||'—'}</div><div style="font-weight:700;color:${(emp.days_until_visa_expiry||999)<90?'var(--red)':'var(--accent)'};font-size:0.85rem">${emp.days_until_visa_expiry!==null?(emp.days_until_visa_expiry<0?'Expired':`${emp.days_until_visa_expiry} days left`):'—'}</div>`:'<div style="color:var(--ink-3);font-size:0.81rem">No visa on record</div>'}
+      </div>
     </div>
-  </div>
-  <div class="portal-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="font-size:0.69rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3)">My Reviews</div>
-      <button class="btn btn-primary btn-sm" onclick="openSelfReview()">+ Submit Review</button>
+    ${emp?.emergency_name?`<div class="card card-padded" style="margin-bottom:16px"><div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:10px">Emergency Contact</div><div style="font-size:0.85rem"><span style="font-weight:500">${emp.emergency_name}</span> · ${emp.emergency_phone||'—'}</div></div>`:''}
+    <div class="card card-padded">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div><div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3)">My Reviews</div><div style="font-size:0.75rem;color:var(--ink-3);margin-top:2px">${(revs||[]).length} total</div></div>
+        <button class="btn btn-primary btn-sm" onclick="openSelfReview()">+ Submit Review</button>
+      </div>
+      ${reviewHtml||'<div style="text-align:center;padding:28px;color:var(--ink-3);font-size:0.81rem">No reviews yet.</div>'}
     </div>
-    ${reviewHtml||'<div style="text-align:center;padding:28px;color:var(--ink-3);font-size:0.81rem">No reviews yet. Submit your first one.</div>'}
   </div>`;
 }
 
+window.openEditMyProfile = async function(){
+  const {data:emp} = await sb.from('v_employee_profile').select('*').eq('user_id',currentUser.id).maybeSingle();
+  showModal(`
+  <div class="modal-header"><h3>Edit My Profile</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">X</button></div>
+  <div class="modal-body">
+    <div class="form-grid">
+      <div class="form-group"><label>Preferred Name</label><input id="ep-prefname" value="${emp?.preferred_name||''}"></div>
+      <div class="form-group"><label>Phone</label><input id="ep-phone" value="${emp?.phone||''}"></div>
+      <div class="form-group"><label>Work Mode</label><select id="ep-workmode"><option value="">Select...</option><option ${emp?.work_mode==='Office'?'selected':''}>Office</option><option ${emp?.work_mode==='Hybrid'?'selected':''}>Hybrid</option><option ${emp?.work_mode==='Remote'?'selected':''}>Remote</option></select></div>
+      <div class="form-group"><label>Working Hours</label><input id="ep-hours" value="${emp?.working_hours||''}" placeholder="e.g. 9am-5pm"></div>
+    </div>
+    <div class="form-group"><label>Biography</label><textarea id="ep-bio" rows="3">${emp?.biography||''}</textarea></div>
+    <div class="form-group"><label>Certifications</label><input id="ep-certs" value="${emp?.certifications||''}"></div>
+    <div class="form-group"><label>Additional Skills</label><input id="ep-skills" value="${emp?.additional_skills||''}"></div>
+    <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin:14px 0 10px;padding-top:12px;border-top:1px solid var(--border)">Emergency Contact</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Name</label><input id="ep-ename" value="${emp?.emergency_name||''}"></div>
+      <div class="form-group"><label>Relationship</label><input id="ep-erel" value="${emp?.emergency_rel||''}"></div>
+      <div class="form-group full"><label>Phone</label><input id="ep-ephone" value="${emp?.emergency_phone||''}"></div>
+    </div>
+    <div id="ep-err" style="display:none;background:var(--red-light);border-radius:8px;padding:9px 12px;font-size:0.79rem;color:var(--red);margin-top:9px"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="window.saveMyProfile()">Save Changes</button>
+  </div>`);
+};
+
+window.saveMyProfile = async function(){
+  const errEl = document.getElementById('ep-err');
+  const {data:empRec} = await sb.from('employees').select('id').eq('profile_id',currentUser.id).maybeSingle();
+  if(!empRec){ errEl.textContent='Employee record not found.'; errEl.style.display='block'; return; }
+  const { error } = await sb.from('employees').update({
+    preferred_name: document.getElementById('ep-prefname').value.trim(),
+    phone: document.getElementById('ep-phone').value.trim(),
+    work_mode: document.getElementById('ep-workmode').value||null,
+    working_hours: document.getElementById('ep-hours').value.trim(),
+    biography: document.getElementById('ep-bio').value.trim(),
+    certifications: document.getElementById('ep-certs').value.trim(),
+    additional_skills: document.getElementById('ep-skills').value.trim(),
+    emergency_name: document.getElementById('ep-ename').value.trim(),
+    emergency_rel: document.getElementById('ep-erel').value.trim(),
+    emergency_phone: document.getElementById('ep-ephone').value.trim(),
+    profile_complete: true
+  }).eq('id', empRec.id);
+  if(error){ errEl.textContent=error.message; errEl.style.display='block'; return; }
+  await sb.from('profiles').update({ profile_complete: true }).eq('id', currentUser.id);
+  closeModal();
+  showToast('Profile updated!');
+  await renderEmployeeDashboard();
+};
 // ── Self Review ────────────────────────────────────────────
 function openSelfReview(){
   showModal(`
