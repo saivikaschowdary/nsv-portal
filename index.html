@@ -423,9 +423,11 @@ async function doLogin(){
   if(!email||!pass){ err.textContent='Enter your email and password.'; err.classList.add('show'); return; }
   const btn=document.getElementById('login-btn');
   btn.disabled=true; btn.textContent='Signing in...';
-  const { error } = await sb.auth.signInWithPassword({ email, password:pass });
+  currentUser=null; // Reset so onAuthStateChange triggers loadUserContext
+  const { data, error } = await sb.auth.signInWithPassword({ email, password:pass });
   btn.disabled=false; btn.textContent='Sign In';
-  if(error){ err.textContent=error.message; err.classList.add('show'); }
+  if(error){ err.textContent=error.message; err.classList.add('show'); return; }
+  if(data?.user) await loadUserContext(data.user);
 }
 
 async function doManagerLogin(){
@@ -434,8 +436,10 @@ async function doManagerLogin(){
   const err=document.getElementById('mgr-error');
   err.classList.remove('show');
   if(!email||!pass){ err.textContent='Enter your email and password.'; err.classList.add('show'); return; }
-  const { error } = await sb.auth.signInWithPassword({ email, password:pass });
-  if(error){ err.textContent=error.message; err.classList.add('show'); }
+  currentUser=null;
+  const { data, error } = await sb.auth.signInWithPassword({ email, password:pass });
+  if(error){ err.textContent=error.message; err.classList.add('show'); return; }
+  if(data?.user) await loadUserContext(data.user);
 }
 
 async function doSignOut(){
@@ -1228,8 +1232,10 @@ async function doEmpPortalLogin(){
   const err=document.getElementById('portal-login-error');
   err.classList.remove('show');
   if(!email||!pass){err.textContent='Enter email and password.';err.classList.add('show');return;}
-  const {error}=await sb.auth.signInWithPassword({email,password:pass});
-  if(error){err.textContent=error.message;err.classList.add('show');}
+  currentUser=null;
+  const {data:loginData,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){err.textContent=error.message;err.classList.add('show');return;}
+  if(loginData?.user) await loadUserContext(loginData.user);
 }
 
 async function renderEmployeeDashboard(){
