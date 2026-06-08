@@ -445,6 +445,11 @@ async function doManagerLogin(){
 async function doSignOut(){
   cleanupRealtime();
   await sb.auth.signOut();
+  // Clear all login fields
+  const fields = ['login-email','login-password','mgr-email','mgr-password','portal-email','portal-password'];
+  fields.forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  // Clear error messages
+  ['login-error','mgr-error','portal-login-error'].forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.remove('show'); });
 }
 
 // ════════════════════════════════════════════════════════════
