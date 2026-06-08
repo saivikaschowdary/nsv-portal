@@ -695,12 +695,10 @@ async function saveNewCompany(){
     });
     if(te){ errEl.textContent='Error creating company: '+te.message; errEl.style.display='block'; btn.disabled=false; btn.textContent='Create Company & Send Email'; return; }
 
-    // 2. Create admin user via security definer (does not hijack session)
-    const { error:ue } = await sb.rpc('create_user_for_tenant', {
-      p_email: adminEmail, p_password: tempPw,
-      p_full_name: adminName, p_role: 'admin', p_tenant_id: tenantId
-    });
-    if(ue){ errEl.textContent='Error creating admin: '+ue.message; errEl.style.display='block'; btn.disabled=false; btn.textContent='Create Company & Send Email'; return; }
+    // 2. Create admin user via edge function
+    const _cu=await fetch('https://ujqeoidsmdiiomipgqig.supabase.co/functions/v1/create-user',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+((await sb.auth.getSession()).data.session?.access_token||'')},body:JSON.stringify({email:adminEmail,password:tempPw,full_name:adminName,role:'admin',tenant_id:tenantId})});
+    const _cd=await _cu.json();
+    if(_cd.error){ errEl.textContent='Error creating admin: '+_cd.error; errEl.style.display='block'; btn.disabled=false; btn.textContent='Create Company & Send Email'; return; }
 
     // 4. Seed default departments
     await sb.from('departments').insert([
@@ -1035,7 +1033,9 @@ async function saveEmployee(){
   const errEl=document.getElementById('ae-err');
   if(!name||!email){errEl.textContent='Name and email required.';errEl.style.display='block';return;}
   const tempPw=genTempPw();
-  const {data:newUserId,error:se}=await sb.rpc('create_user_for_tenant',{p_email:email,p_password:tempPw,p_full_name:name,p_role:'employee',p_tenant_id:tid()});
+  const _eu=await fetch('https://ujqeoidsmdiiomipgqig.supabase.co/functions/v1/create-user',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+((await sb.auth.getSession()).data.session?.access_token||'')},body:JSON.stringify({email,password:tempPw,full_name:name,role:'employee',tenant_id:tid()})});
+  const _ed=await _eu.json();
+  const newUserId=_ed.id, se=_ed.error?{message:_ed.error}:null;
   if(se||!newUserId){errEl.textContent=se?.message||'Error creating user';errEl.style.display='block';return;}
   const {data:emp}=await sb.from('employees').insert({tenant_id:tid(),profile_id:newUserId,job_title:document.getElementById('ae-title').value.trim(),department_id:document.getElementById('ae-dept').value||null,manager_id:document.getElementById('ae-mgr').value||null,status:document.getElementById('ae-status').value}).select().single();
   const vt=document.getElementById('ae-visa').value;
@@ -1144,7 +1144,9 @@ async function saveUser(role){
   const errEl=document.getElementById('au-err');
   if(!name||!email){errEl.textContent='Name and email required.';errEl.style.display='block';return;}
   const tempPw=genTempPw();
-  const {data:newUserId,error}=await sb.rpc('create_user_for_tenant',{p_email:email,p_password:tempPw,p_full_name:name,p_role:role,p_tenant_id:tid()});
+  const _mu=await fetch('https://ujqeoidsmdiiomipgqig.supabase.co/functions/v1/create-user',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+((await sb.auth.getSession()).data.session?.access_token||'')},body:JSON.stringify({email,password:tempPw,full_name:name,role,tenant_id:tid()})});
+  const _md=await _mu.json();
+  const newUserId=_md.id, error=_md.error?{message:_md.error}:null;
   if(error||!newUserId){errEl.textContent=error?.message||'Error';errEl.style.display='block';return;}
   await sb.from('profiles').insert({id:newUserId,tenant_id:tid(),role,full_name:name,email,username:name.toLowerCase().replace(/\s+/g,'.'),must_change_pw:true,profile_complete:false});
   if(role==='manager'){await sb.from('managers').insert({tenant_id:tid(),profile_id:sd.user.id});}
