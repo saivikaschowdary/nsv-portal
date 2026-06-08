@@ -775,7 +775,7 @@ const isAdmin=()=>currentProfile?.role==='admin';
 async function rDash(){
   const [er,rr,vr,pr]=await Promise.all([
     sb.from('employees').select('id,status').eq('tenant_id',tid()),
-    sb.from('reviews').select('id').eq('tenant_id',tid()).eq('status','Submitted'),
+    sb.from('reviews').select('id',{count:'exact',head:true}).eq('tenant_id',tid()).eq('status','Submitted'),
     sb.from('visa_details').select('visa_expiry_date').eq('tenant_id',tid()),
     sb.from('employees').select('id,project_end').eq('tenant_id',tid()).not('project_end','is',null)
   ]);
@@ -981,7 +981,10 @@ async function rProjects(){
 
 // ── Reviews ────────────────────────────────────────────────
 async function rReviews(){
-  const {data}=await sb.from('reviews').select('*,employees(profile_id,profiles(full_name))').eq('tenant_id',tid()).order('review_date',{ascending:false});
+  const {data:reviewsRaw}=await sb.from('reviews').select('*').eq('tenant_id',tid()).order('review_date',{ascending:false});
+  const {data:empProfiles}=await sb.from('v_employee_profile').select('user_id,employee_id,full_name').eq('tenant_id',tid());
+  const empMap={};(empProfiles||[]).forEach(e=>empMap[e.employee_id]=e.full_name);
+  const data=(reviewsRaw||[]).map(r=>({...r,employees:{profiles:{full_name:empMap[r.employee_id]||'Unknown'}}}));
   const list=data||[],pending=list.filter(r=>r.status==='Submitted'),approved=list.filter(r=>r.status==='Approved');
   const rRow=r=>{const name=r.employees?.profiles?.full_name||'Unknown';const avg=r.score_delivery?((r.score_delivery+r.score_communication+r.score_innovation+r.score_teamwork)/4).toFixed(1):'—';return`<tr><td><strong>${name}</strong></td><td><span class="badge badge-${r.period==='Weekly'?'blue':'gray'}">${r.period}</span></td><td>${r.review_date}</td><td><strong>${avg}/5</strong></td><td>${r.status==='Approved'?'<span class="badge badge-green">Approved</span>':'<span class="badge badge-amber">Pending</span>'}</td><td><button class="btn btn-ghost btn-sm" onclick="viewReview('${r.id}')">Review →</button></td></tr>`;};
   return`<div class="page-header"><div><h2>Evaluations</h2><p>${pending.length} pending · ${approved.length} approved</p></div></div>
@@ -994,7 +997,8 @@ async function rReviews(){
 }
 
 async function viewReview(id){
-  const {data:r}=await sb.from('reviews').select('*,employees(profile_id,profiles(full_name))').eq('id',id).single();
+  const {data:r}=await sb.from('reviews').select('*').eq('id',id).single();
+  if(r){const {data:ep}=await sb.from('v_employee_profile').select('full_name').eq('employee_id',r.employee_id).maybeSingle();if(ep)r.employees={profiles:{full_name:ep.full_name}};}
   if(!r)return;
   const name=r.employees?.profiles?.full_name||'Unknown';
   const avg=r.score_delivery?((r.score_delivery+r.score_communication+r.score_innovation+r.score_teamwork)/4).toFixed(1):'—';
