@@ -797,13 +797,13 @@ async function rDash(){
   return`<div class="page-header"><div><h2>Overview</h2><p>${currentTenant?.name||''} · <span class="realtime-dot"></span>Live</p></div><button class="btn btn-primary btn-sm" onclick="openAddEmployee()">+ Add Employee</button></div>
   <div class="page-body">
     <div class="metric-grid">
-      <div class="metric-card mc-green" style="cursor:pointer" onclick="navigate('employees')"><div class="metric-label">Total Employees</div><div class="metric-val">${total}</div><div class="metric-sub">Click to view all →</div></div>
-      <div class="metric-card mc-blue" style="cursor:pointer" onclick="navigate('employees')"><div class="metric-label">On Bench</div><div class="metric-val cv-blue">${bench}</div><div class="metric-sub">${active} active · click to view →</div></div>
-      <div class="metric-card mc-red" style="cursor:pointer" onclick="navigate('visas')"><div class="metric-label">Visa Expiring</div><div class="metric-val cv-red">${visaExp}</div><div class="metric-sub">Within 90 days · click to view →</div></div>
-      <div class="metric-card mc-amber" style="cursor:pointer" onclick="navigate('reviews')"><div class="metric-label">Pending Reviews</div><div class="metric-val cv-amber">${pending}</div><div class="metric-sub">Need approval · click to view →</div></div>
+      <div class="metric-card mc-green" style="cursor:pointer" onclick="showDashPopup('employees')"><div class="metric-label">Total Employees</div><div class="metric-val">${total}</div><div class="metric-sub">Click for overview →</div></div>
+      <div class="metric-card mc-blue" style="cursor:pointer" onclick="showDashPopup('bench')"><div class="metric-label">On Bench</div><div class="metric-val cv-blue">${bench}</div><div class="metric-sub">${active} active · click for overview →</div></div>
+      <div class="metric-card mc-red" style="cursor:pointer" onclick="showDashPopup('visas')"><div class="metric-label">Visa Expiring</div><div class="metric-val cv-red">${visaExp}</div><div class="metric-sub">Within 90 days · click for overview →</div></div>
+      <div class="metric-card mc-amber" style="cursor:pointer" onclick="showDashPopup('reviews')"><div class="metric-label">Pending Reviews</div><div class="metric-val cv-amber">${pending}</div><div class="metric-sub">Need approval · click for overview →</div></div>
     </div>
-    ${visaExp>0?`<div class="alert alert-red" style="cursor:pointer" onclick="navigate('visas')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>${visaExp} visa(s) expiring within 90 days — Click to view</div>`:''}
-    ${projEnd>0?`<div class="alert alert-amber" style="cursor:pointer" onclick="navigate('projects')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>${projEnd} project(s) ending within 60 days — Click to view</div>`:''}
+    ${visaExp>0?`<div class="alert alert-red" style="cursor:pointer" onclick="showDashPopup('visas')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>${visaExp} visa(s) expiring within 90 days — Click for overview</div>`:''}
+    ${projEnd>0?`<div class="alert alert-amber" style="cursor:pointer" onclick="showDashPopup('projects')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>${projEnd} project(s) ending within 60 days — Click for overview</div>`:''}
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px">
 
