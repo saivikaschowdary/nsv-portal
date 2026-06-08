@@ -1272,6 +1272,17 @@ function openSelfReview(){
     </div>
     <div class="form-group" style="margin-bottom:8px"><label>Goals for Next Period</label><textarea id="sr-goals" rows="2" style="resize:vertical"></textarea></div>
     <div class="form-group"><label>Mood</label><select id="sr-mood"><option value="Great">😊 Great</option><option value="Good" selected>🙂 Good</option><option value="Okay">😐 Okay</option><option value="Struggling">😔 Struggling</option></select></div>
+    <div style="background:var(--surface-2);border-radius:9px;padding:11px;margin-top:9px">
+      <div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px">Support Needed?</div>
+      <div style="display:flex;gap:10px;margin-bottom:8px">
+        <label style="display:flex;align-items:center;gap:5px;font-size:0.82rem;cursor:pointer"><input type="radio" name="sr-support" id="sr-support-no" value="no" checked onchange="document.getElementById('sr-support-details-wrap').style.display='none'"> No</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:0.82rem;cursor:pointer"><input type="radio" name="sr-support" id="sr-support-yes" value="yes" onchange="document.getElementById('sr-support-details-wrap').style.display='block'"> Yes</label>
+      </div>
+      <div id="sr-support-details-wrap" style="display:none">
+        <label style="font-size:0.78rem;color:var(--ink-3);display:block;margin-bottom:4px">Please describe what support you need</label>
+        <textarea id="sr-support-details" rows="2" style="resize:vertical;width:100%;box-sizing:border-box"></textarea>
+      </div>
+    </div>
     <div id="sr-err" style="display:none;background:var(--red-light);border-radius:8px;padding:9px 12px;font-size:0.79rem;color:var(--red);margin-top:9px"></div>
   </div>
   <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="submitSelfReview()">Submit</button></div>`);
@@ -1284,7 +1295,7 @@ async function submitSelfReview(){
   if(!assigned||!completed){err.textContent='Tasks assigned and completed are required.';err.style.display='block';return;}
   const {data:emp}=await sb.from('employees').select('id').eq('profile_id',currentUser.id).single();
   if(!emp){err.textContent='Employee record not found.';err.style.display='block';return;}
-  const {error}=await sb.from('reviews').insert({tenant_id:currentTenant.id,employee_id:emp.id,period:document.getElementById('sr-period').value,review_date:document.getElementById('sr-date').value,score_delivery:parseInt(document.getElementById('sr-delivery').value),score_communication:parseInt(document.getElementById('sr-communication').value),score_innovation:parseInt(document.getElementById('sr-innovation').value),score_teamwork:parseInt(document.getElementById('sr-teamwork').value),tasks_assigned:assigned,tasks_completed:completed,tasks_pending:document.getElementById('sr-pending').value.trim(),goals_next:document.getElementById('sr-goals').value.trim(),mood:document.getElementById('sr-mood').value,status:'Submitted',self_submitted:true});
+  const {error}=await sb.from('reviews').insert({tenant_id:currentTenant.id,employee_id:emp.id,period:document.getElementById('sr-period').value,review_date:document.getElementById('sr-date').value,score_delivery:parseInt(document.getElementById('sr-delivery').value),score_communication:parseInt(document.getElementById('sr-communication').value),score_innovation:parseInt(document.getElementById('sr-innovation').value),score_teamwork:parseInt(document.getElementById('sr-teamwork').value),tasks_assigned:assigned,tasks_completed:completed,tasks_pending:document.getElementById('sr-pending').value.trim(),goals_next:document.getElementById('sr-goals').value.trim(),mood:document.getElementById('sr-mood').value,support_required:document.getElementById('sr-support-yes').checked,support_details:document.getElementById('sr-support-yes').checked?document.getElementById('sr-support-details').value.trim():null,status:'Submitted',self_submitted:true});
   if(error){err.textContent=error.message;err.style.display='block';return;}
   closeModal();showToast('✓ Review submitted!');
   await renderEmployeeDashboard();
