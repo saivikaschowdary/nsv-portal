@@ -810,7 +810,7 @@ const isAdmin=()=>currentProfile?.role==='admin';
 async function rDash(){
   const [er,rr,vr,pr]=await Promise.all([
     sb.from('employees').select('id,status').eq('tenant_id',tid()),
-    sb.from('reviews').select('id',{count:'exact',head:true}).eq('tenant_id',tid()).eq('status','Submitted'),
+    sb.from('reviews').select('id').eq('tenant_id',tid()).eq('status','Submitted'),
     sb.from('visa_details').select('visa_expiry_date').eq('tenant_id',tid()),
     sb.from('employees').select('id,project_end').eq('tenant_id',tid()).not('project_end','is',null)
   ]);
