@@ -558,6 +558,41 @@ window.deleteEmployee = async function(userId){
   navigate('employees');
 };
 
+
+window.showDashPopup = async function(type){
+  let title='', html='';
+
+  if(type==='employees'||type==='bench'){
+    const {data}=await sb.from('v_employee_profile').select('full_name,job_title,department_name,status,manager_name').eq('tenant_id',tid()).order('full_name');
+    const list=(data||[]).filter(e=>type==='bench'?e.status==='Bench':true);
+    title=type==='bench'?'Employees On Bench':'All Employees';
+    html=list.length===0?'<p style="color:var(--ink-3);text-align:center;padding:20px">No employees found.</p>':`<table style="width:100%;border-collapse:collapse;font-size:0.81rem"><thead><tr style="border-bottom:1px solid var(--border)"><th style="padding:8px;text-align:left">Name</th><th style="padding:8px;text-align:left">Title</th><th style="padding:8px;text-align:left">Department</th><th style="padding:8px;text-align:left">Status</th></tr></thead><tbody>${list.map((e,i)=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px"><div style="display:flex;align-items:center;gap:8px">${mkAv(e.full_name,i)}<span style="font-weight:500">${e.full_name}</span></div></td><td style="padding:8px;color:var(--ink-3)">${e.job_title||'—'}</td><td style="padding:8px;color:var(--ink-3)">${e.department_name||'—'}</td><td style="padding:8px">${sBadge(e.status||'Active')}</td></tr>`).join('')}</tbody></table>`;
+  }
+  else if(type==='visas'){
+    const {data}=await sb.from('v_employee_profile').select('full_name,visa_type,visa_expiry_date,days_until_visa_expiry').eq('tenant_id',tid());
+    const list=(data||[]).filter(e=>e.visa_type&&(e.days_until_visa_expiry||999)<90).sort((a,b)=>(a.days_until_visa_expiry??9999)-(b.days_until_visa_expiry??9999));
+    title='Visas Expiring Within 90 Days';
+    html=list.length===0?'<p style="color:var(--ink-3);text-align:center;padding:20px">No visas expiring soon.</p>':`<table style="width:100%;border-collapse:collapse;font-size:0.81rem"><thead><tr style="border-bottom:1px solid var(--border)"><th style="padding:8px;text-align:left">Name</th><th style="padding:8px;text-align:left">Visa</th><th style="padding:8px;text-align:left">Expiry</th><th style="padding:8px;text-align:left">Days Left</th></tr></thead><tbody>${list.map((e,i)=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px"><div style="display:flex;align-items:center;gap:8px">${mkAv(e.full_name,i)}<span style="font-weight:500">${e.full_name}</span></div></td><td style="padding:8px"><span class="badge badge-gray">${e.visa_type}</span></td><td style="padding:8px;color:var(--ink-3)">${e.visa_expiry_date||'—'}</td><td style="padding:8px;font-weight:700;color:${(e.days_until_visa_expiry||999)<30?'var(--red)':'var(--amber)'}">${e.days_until_visa_expiry<0?'Expired':`${e.days_until_visa_expiry}d`}</td></tr>`).join('')}</tbody></table>`;
+  }
+  else if(type==='reviews'){
+    const {data:reviewsRaw}=await sb.from('reviews').select('*').eq('tenant_id',tid()).eq('status','Submitted').order('review_date',{ascending:false});
+    const {data:empProfiles}=await sb.from('v_employee_profile').select('employee_id,full_name').eq('tenant_id',tid());
+    const empMap={};(empProfiles||[]).forEach(e=>empMap[e.employee_id]=e.full_name);
+    const list=reviewsRaw||[];
+    title='Pending Reviews';
+    html=list.length===0?'<p style="color:var(--ink-3);text-align:center;padding:20px">No pending reviews.</p>':`<table style="width:100%;border-collapse:collapse;font-size:0.81rem"><thead><tr style="border-bottom:1px solid var(--border)"><th style="padding:8px;text-align:left">Employee</th><th style="padding:8px;text-align:left">Period</th><th style="padding:8px;text-align:left">Date</th><th style="padding:8px;text-align:left">Score</th><th style="padding:8px"></th></tr></thead><tbody>${list.map(r=>{const avg=r.score_delivery?((r.score_delivery+r.score_communication+r.score_innovation+r.score_teamwork)/4).toFixed(1):'—';return`<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px;font-weight:500">${empMap[r.employee_id]||'Unknown'}</td><td style="padding:8px"><span class="badge badge-${r.period==='Weekly'?'blue':'gray'}">${r.period}</span></td><td style="padding:8px;color:var(--ink-3)">${r.review_date}</td><td style="padding:8px;font-weight:700">${avg}/5</td><td style="padding:8px"><button class="btn btn-ghost btn-sm" onclick="closeModal();viewReview('${r.id}')">Review →</button></td></tr>`;}).join('')}</tbody></table>`;
+  }
+  else if(type==='projects'){
+    const today=new Date();
+    const {data}=await sb.from('v_employee_profile').select('full_name,current_project,project_end').eq('tenant_id',tid()).not('project_end','is',null);
+    const list=(data||[]).map(e=>({...e,daysLeft:Math.ceil((new Date(e.project_end)-today)/86400000)})).filter(e=>e.daysLeft<=60).sort((a,b)=>a.daysLeft-b.daysLeft);
+    title='Projects Ending Within 60 Days';
+    html=list.length===0?'<p style="color:var(--ink-3);text-align:center;padding:20px">No projects ending soon.</p>':`<table style="width:100%;border-collapse:collapse;font-size:0.81rem"><thead><tr style="border-bottom:1px solid var(--border)"><th style="padding:8px;text-align:left">Employee</th><th style="padding:8px;text-align:left">Project</th><th style="padding:8px;text-align:left">End Date</th><th style="padding:8px;text-align:left">Days Left</th></tr></thead><tbody>${list.map((e,i)=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px"><div style="display:flex;align-items:center;gap:8px">${mkAv(e.full_name,i)}<span style="font-weight:500">${e.full_name}</span></div></td><td style="padding:8px;color:var(--ink-3)">${e.current_project||'—'}</td><td style="padding:8px;color:var(--ink-3)">${e.project_end}</td><td style="padding:8px;font-weight:700;color:${e.daysLeft<30?'var(--red)':'var(--amber)'}">${e.daysLeft<0?'Ended':`${e.daysLeft}d`}</td></tr>`).join('')}</tbody></table>`;
+  }
+
+  showModal(`<div class="modal-header"><h3>${title}</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">X</button></div><div class="modal-body" style="max-height:60vh;overflow-y:auto">${html}</div><div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">Close</button></div>`);
+};
+
 async function platformNav(page){
   document.querySelectorAll('[id^="pnav-"]').forEach(e=>e.classList.remove('active'));
   document.getElementById('pnav-'+page)?.classList.add('active');
