@@ -370,7 +370,7 @@ async function init(){
   else showScreen('screen-auth');
 
   sb.auth.onAuthStateChange(async (event, session)=>{
-    if(event==='SIGNED_IN' && session && !currentUser) await loadUserContext(session.user);
+    if(event==='SIGNED_IN' && session && !currentUser && !window._loggingIn) await loadUserContext(session.user);
     else if(event==='USER_UPDATED' && session && currentUser) { /* ignore - handled by doChangePw */ }
     else if(event==='SIGNED_OUT'){ currentUser=null; currentProfile=null; currentTenant=null; cleanupRealtime(); showScreen('screen-auth'); }
   });
@@ -437,7 +437,9 @@ async function doManagerLogin(){
   err.classList.remove('show');
   if(!email||!pass){ err.textContent='Enter your email and password.'; err.classList.add('show'); return; }
   currentUser=null;
+  window._loggingIn=true;
   const { data, error } = await sb.auth.signInWithPassword({ email, password:pass });
+  window._loggingIn=false;
   if(error){ err.textContent=error.message; err.classList.add('show'); return; }
   if(data?.user){
     const {data:profile} = await sb.from('profiles').select('role').eq('id',data.user.id).maybeSingle();
@@ -1248,7 +1250,9 @@ async function doEmpPortalLogin(){
   err.classList.remove('show');
   if(!email||!pass){err.textContent='Enter email and password.';err.classList.add('show');return;}
   currentUser=null;
+  window._loggingIn=true;
   const {data:loginData,error}=await sb.auth.signInWithPassword({email,password:pass});
+  window._loggingIn=false;
   if(error){err.textContent=error.message;err.classList.add('show');return;}
   if(loginData?.user){
     const {data:profile}=await sb.from('profiles').select('role').eq('id',loginData.user.id).maybeSingle();
