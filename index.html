@@ -370,9 +370,10 @@ async function init(){
   else showScreen('screen-auth');
 
   sb.auth.onAuthStateChange(async (event, session)=>{
+    if(window._roleRejecting) return; // ignore all events during role rejection
     if(event==='SIGNED_IN' && session && !currentUser && !window._loggingIn) await loadUserContext(session.user);
     else if(event==='USER_UPDATED' && session && currentUser) { /* ignore - handled by doChangePw */ }
-    else if(event==='SIGNED_OUT' && !window._loggingIn){ currentUser=null; currentProfile=null; currentTenant=null; cleanupRealtime(); showScreen('screen-auth'); }
+    else if(event==='SIGNED_OUT'){ currentUser=null; currentProfile=null; currentTenant=null; cleanupRealtime(); showScreen('screen-auth'); }
   });
 }
 
@@ -444,8 +445,10 @@ async function doManagerLogin(){
   if(data?.user){
     const {data:profile} = await sb.from('profiles').select('role').eq('id',data.user.id).maybeSingle();
     if(profile?.role==='employee'||profile?.role==='platform_admin'){
+      window._roleRejecting=true;
       currentUser=null;
       await sb.auth.signOut();
+      window._roleRejecting=false;
       err.textContent='Invalid credentials. Please use the Employee Portal.';
       err.classList.add('show');
       return;
@@ -1257,8 +1260,10 @@ async function doEmpPortalLogin(){
   if(loginData?.user){
     const {data:profile}=await sb.from('profiles').select('role').eq('id',loginData.user.id).maybeSingle();
     if(profile?.role==='manager'||profile?.role==='admin'||profile?.role==='platform_admin'){
+      window._roleRejecting=true;
       currentUser=null;
       await sb.auth.signOut();
+      window._roleRejecting=false;
       err.textContent='Invalid credentials. Please use the Admin or Manager Portal.';
       err.classList.add('show');
       return;
