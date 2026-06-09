@@ -424,11 +424,25 @@ async function doLogin(){
   if(!email||!pass){ err.textContent='Enter your email and password.'; err.classList.add('show'); return; }
   const btn=document.getElementById('login-btn');
   btn.disabled=true; btn.textContent='Signing in...';
-  currentUser=null; // Reset so onAuthStateChange triggers loadUserContext
+  currentUser=null;
+  window._loggingIn=true;
   const { data, error } = await sb.auth.signInWithPassword({ email, password:pass });
+  window._loggingIn=false;
   btn.disabled=false; btn.textContent='Sign In';
   if(error){ err.textContent=error.message; err.classList.add('show'); return; }
-  if(data?.user) await loadUserContext(data.user);
+  if(data?.user){
+    const {data:profile}=await sb.from('profiles').select('role').eq('id',data.user.id).maybeSingle();
+    if(profile?.role==='employee'){
+      window._roleRejecting=true;
+      currentUser=null;
+      await sb.auth.signOut();
+      window._roleRejecting=false;
+      err.textContent='Invalid credentials. Please use the Employee Portal.';
+      err.classList.add('show');
+      return;
+    }
+    await loadUserContext(data.user);
+  }
 }
 
 async function doManagerLogin(){
