@@ -441,7 +441,8 @@ async function doManagerLogin(){
   if(error){ err.textContent=error.message; err.classList.add('show'); return; }
   if(data?.user){
     const {data:profile} = await sb.from('profiles').select('role').eq('id',data.user.id).maybeSingle();
-    if(profile?.role==='employee'){
+    if(profile?.role==='employee'||profile?.role==='platform_admin'){
+      currentUser=null;
       await sb.auth.signOut();
       err.textContent='Invalid credentials. Please use the Employee Portal.';
       err.classList.add('show');
@@ -1251,7 +1252,8 @@ async function doEmpPortalLogin(){
   if(error){err.textContent=error.message;err.classList.add('show');return;}
   if(loginData?.user){
     const {data:profile}=await sb.from('profiles').select('role').eq('id',loginData.user.id).maybeSingle();
-    if(profile?.role==='manager'||profile?.role==='admin'){
+    if(profile?.role==='manager'||profile?.role==='admin'||profile?.role==='platform_admin'){
+      currentUser=null;
       await sb.auth.signOut();
       err.textContent='Invalid credentials. Please use the Admin or Manager Portal.';
       err.classList.add('show');
