@@ -439,7 +439,16 @@ async function doManagerLogin(){
   currentUser=null;
   const { data, error } = await sb.auth.signInWithPassword({ email, password:pass });
   if(error){ err.textContent=error.message; err.classList.add('show'); return; }
-  if(data?.user) await loadUserContext(data.user);
+  if(data?.user){
+    const {data:profile} = await sb.from('profiles').select('role').eq('id',data.user.id).maybeSingle();
+    if(profile?.role==='employee'){
+      await sb.auth.signOut();
+      err.textContent='Invalid credentials. Please use the Employee Portal.';
+      err.classList.add('show');
+      return;
+    }
+    await loadUserContext(data.user);
+  }
 }
 
 async function doSignOut(){
@@ -1240,7 +1249,16 @@ async function doEmpPortalLogin(){
   currentUser=null;
   const {data:loginData,error}=await sb.auth.signInWithPassword({email,password:pass});
   if(error){err.textContent=error.message;err.classList.add('show');return;}
-  if(loginData?.user) await loadUserContext(loginData.user);
+  if(loginData?.user){
+    const {data:profile}=await sb.from('profiles').select('role').eq('id',loginData.user.id).maybeSingle();
+    if(profile?.role==='manager'||profile?.role==='admin'){
+      await sb.auth.signOut();
+      err.textContent='Invalid credentials. Please use the Admin or Manager Portal.';
+      err.classList.add('show');
+      return;
+    }
+    await loadUserContext(loginData.user);
+  }
 }
 
 async function renderEmployeeDashboard(){
