@@ -743,7 +743,9 @@ async function rTimesheets(){
   const {data:empProfiles}=await sb.from('v_employee_profile').select('employee_id,full_name').eq('tenant_id',tid());
   const empMap={};(empProfiles||[]).forEach(e=>empMap[e.employee_id]=e.full_name);
   const list=tsRaw||[];
-  const pending=list.filter(t=>t.status==='Submitted');
+  // Track resubmissions - Submitted timesheets that were previously approved/rejected (have manager_comment or reviewed_by)
+  const resubmitted=list.filter(t=>t.status==='Submitted'&&(t.manager_comment||t.reviewed_by));
+  const freshPending=list.filter(t=>t.status==='Submitted'&&!t.manager_comment&&!t.reviewed_by);
   const others=list.filter(t=>t.status!=='Submitted');
 
   const tsRow=t=>`<tr>
@@ -755,13 +757,22 @@ async function rTimesheets(){
     <td><button class="btn btn-ghost btn-sm" onclick="viewTimesheet('${t.id}')">View →</button></td>
   </tr>`;
 
-  return`<div class="page-header"><div><h2>Timesheets</h2><p>${pending.length} pending approval</p></div></div>
+  return`<div class="page-header"><div><h2>Timesheets</h2><p>${freshPending.length+resubmitted.length} pending approval</p></div></div>
   <div class="page-body">
-    ${pending.length?`
-    <div style="font-size:0.69rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:8px">Pending (${pending.length})</div>
+    ${resubmitted.length?`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <div style="font-size:0.69rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--amber)">Resubmitted (${resubmitted.length})</div>
+      <span style="background:var(--amber-light);color:var(--amber);font-size:0.68rem;padding:2px 7px;border-radius:20px;font-weight:600">Needs Re-approval</span>
+    </div>
+    <div class="card table-wrap" style="margin-bottom:16px;border:1px solid var(--amber)"><table>
+      <thead><tr><th>Employee</th><th>Week</th><th>Hours</th><th>Project</th><th>Status</th><th></th></tr></thead>
+      <tbody>${resubmitted.map(tsRow).join('')}</tbody>
+    </table></div>`:''}
+    ${freshPending.length?`
+    <div style="font-size:0.69rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:8px">Pending (${freshPending.length})</div>
     <div class="card table-wrap" style="margin-bottom:16px"><table>
       <thead><tr><th>Employee</th><th>Week</th><th>Hours</th><th>Project</th><th>Status</th><th></th></tr></thead>
-      <tbody>${pending.map(tsRow).join('')}</tbody>
+      <tbody>${freshPending.map(tsRow).join('')}</tbody>
     </table></div>`:''}
     <div style="font-size:0.69rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:8px">All Timesheets (${others.length})</div>
     <div class="card table-wrap"><table>
