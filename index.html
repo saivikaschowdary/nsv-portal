@@ -1026,6 +1026,7 @@ async function viewEmployee(empId){
       <div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px">Project</div>
       <div style="font-weight:500">${e.current_project||'Unassigned'}</div>
       <div style="font-size:0.75rem;color:var(--ink-3)">${e.current_client||''}</div>
+      ${e.current_vendor?`<div style="font-size:0.75rem;color:var(--ink-3)">Vendor: ${e.current_vendor}</div>`:''}
       <div style="display:flex;gap:5px;margin-top:5px;flex-wrap:wrap">
         ${e.project_start?`<span style="background:var(--accent-light);color:var(--accent);padding:2px 7px;border-radius:20px;font-size:0.7rem">Start: ${e.project_start}</span>`:''}
         ${e.project_end?`<span style="background:var(--amber-light);color:var(--amber);padding:2px 7px;border-radius:20px;font-size:0.7rem">End: ${e.project_end}</span>`:''}
