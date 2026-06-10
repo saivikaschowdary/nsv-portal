@@ -1054,30 +1054,76 @@ async function editEmployee(empId){
   if(!e) return;
   showModal(`
   <div class="modal-header"><h3>Edit — ${e.full_name}</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
-  <div class="modal-body"><div class="form-grid">
-    <div class="form-group"><label>Job Title</label><input id="ee-title" value="${e.job_title||''}"></div>
-    <div class="form-group"><label>Status</label><select id="ee-status"><option ${e.status==='Active'?'selected':''}>Active</option><option ${e.status==='Bench'?'selected':''}>Bench</option><option ${e.status==='Inactive'?'selected':''}>Inactive</option></select></div>
-    <div class="form-group"><label>Department</label><select id="ee-dept"><option value="">None</option>${depts.map(d=>`<option value="${d.id}" ${d.name===e.department_name?'selected':''}>${d.name}</option>`).join('')}</select></div>
-    <div class="form-group"><label>Manager</label><select id="ee-mgr"><option value="">None</option>${mgrs.map(m=>`<option value="${m.id}" ${m.full_name===e.manager_name?'selected':''}>${m.full_name}</option>`).join('')}</select></div>
-    <div class="form-group"><label>Location</label><input id="ee-location" value="${e.location||''}"></div>
-    <div class="form-group"><label>Join Date</label><input type="date" id="ee-joindate" value="${e.join_date||''}"></div>
-    <div class="form-group full" style="border-top:1px solid var(--border);padding-top:9px"><label>Current Client</label><input id="ee-client" value="${e.current_client||''}"></div>
-    <div class="form-group full"><label>Current Project</label><input id="ee-project" value="${e.current_project||''}"></div>
-    <div class="form-group"><label>Project Start</label><input type="date" id="ee-pstart" value="${e.project_start||''}"></div>
-    <div class="form-group"><label>Project End</label><input type="date" id="ee-pend" value="${e.project_end||''}"></div>
-    <div class="form-group full" style="border-top:1px solid var(--border);padding-top:9px"><label>Visa Type</label><select id="ee-visa"><option value="">None</option>${['H-1B','L-1A','OPT','STEM OPT','TN','Green Card','Citizen'].map(v=>`<option ${v===e.visa_type?'selected':''}>${v}</option>`).join('')}</select></div>
-    <div class="form-group"><label>Visa Expiry</label><input type="date" id="ee-vexp" value="${e.visa_expiry_date||''}"></div>
-  </div>
+  <div class="modal-body">
+
+    <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:10px">Job Details</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Job Title *</label><input id="ee-title" value="${e.job_title||''}" placeholder="e.g. Software Engineer"></div>
+      <div class="form-group"><label>Status *</label><select id="ee-status"><option ${e.status==='Active'?'selected':''}>Active</option><option ${e.status==='Bench'?'selected':''}>Bench</option><option ${e.status==='Inactive'?'selected':''}>Inactive</option></select></div>
+      <div class="form-group"><label>Department</label><select id="ee-dept"><option value="">None</option>${depts.map(d=>`<option value="${d.id}" ${d.name===e.department_name?'selected':''}>${d.name}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Manager</label><select id="ee-mgr"><option value="">None</option>${mgrs.map(m=>`<option value="${m.id}" ${m.full_name===e.manager_name?'selected':''}>${m.full_name}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Location</label><input id="ee-location" value="${e.location||''}" placeholder="e.g. New York, NY"></div>
+      <div class="form-group"><label>Join Date</label><input type="date" id="ee-joindate" value="${e.join_date||''}"></div>
+      <div class="form-group"><label>Phone</label><input id="ee-phone" value="${e.phone||''}" placeholder="+1 (555) 000-0000"></div>
+      <div class="form-group"><label>Work Mode</label><select id="ee-workmode"><option value="">Select...</option><option ${e.work_mode==='Office'?'selected':''}>Office</option><option ${e.work_mode==='Hybrid'?'selected':''}>Hybrid</option><option ${e.work_mode==='Remote'?'selected':''}>Remote</option></select></div>
+      <div class="form-group"><label>Working Hours</label><input id="ee-hours" value="${e.working_hours||''}" placeholder="e.g. 9am-5pm EST"></div>
+    </div>
+    <div class="form-group" style="margin-top:4px"><label>Biography</label><textarea id="ee-bio" rows="2" style="resize:vertical">${e.biography||''}</textarea></div>
+
+    <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin:14px 0 10px;padding-top:12px;border-top:1px solid var(--border)">Project</div>
+    <div class="form-grid">
+      <div class="form-group full"><label>Current Client</label><input id="ee-client" value="${e.current_client||''}"></div>
+      <div class="form-group full"><label>Current Project</label><input id="ee-project" value="${e.current_project||''}"></div>
+      <div class="form-group"><label>Project Start</label><input type="date" id="ee-pstart" value="${e.project_start||''}"></div>
+      <div class="form-group"><label>Project End</label><input type="date" id="ee-pend" value="${e.project_end||''}"></div>
+    </div>
+
+    <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin:14px 0 10px;padding-top:12px;border-top:1px solid var(--border)">Visa & Immigration</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Visa Type</label><select id="ee-visa"><option value="">None</option>${['H-1B','L-1A','OPT','STEM OPT','TN','Green Card','Citizen'].map(v=>`<option ${v===e.visa_type?'selected':''}>${v}</option>`).join('')}</select></div>
+      <div class="form-group"><label>Visa Expiry</label><input type="date" id="ee-vexp" value="${e.visa_expiry_date||''}"></div>
+      <div class="form-group"><label>Country of Origin</label><input id="ee-country" value="${e.country_of_origin||''}" placeholder="e.g. India"></div>
+    </div>
+    <div class="form-group" style="margin-top:4px"><label>LCA Duties</label><textarea id="ee-lca" rows="2" style="resize:vertical" placeholder="Describe the LCA job duties...">${e.lca_duties||''}</textarea></div>
+
   <div id="ee-err" style="display:none;background:var(--red-light);border-radius:8px;padding:9px 12px;font-size:0.79rem;color:var(--red);margin-top:10px"></div></div>
-  <div class="modal-footer"><button class="btn btn-ghost" onclick="viewEmployee('${empId}')">← Back</button><button class="btn btn-primary" onclick="saveEditEmployee('${empId}')">Save</button></div>`);
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="viewEmployee('${empId}')">← Back</button><button class="btn btn-primary" onclick="saveEditEmployee('${empId}')">Save Changes</button></div>`);
 }
 
 async function saveEditEmployee(empId){
   const errEl=document.getElementById('ee-err');
-  const {error}=await sb.from('employees').update({job_title:document.getElementById('ee-title').value.trim(),status:document.getElementById('ee-status').value,department_id:document.getElementById('ee-dept').value||null,manager_id:document.getElementById('ee-mgr').value||null,location:document.getElementById('ee-location').value.trim(),join_date:document.getElementById('ee-joindate').value||null,current_client:document.getElementById('ee-client').value.trim(),current_project:document.getElementById('ee-project').value.trim(),project_start:document.getElementById('ee-pstart').value||null,project_end:document.getElementById('ee-pend').value||null,updated_at:new Date().toISOString()}).eq('id',empId);
+  const title=document.getElementById('ee-title').value.trim();
+  const status=document.getElementById('ee-status').value;
+  if(!title){errEl.textContent='Job title is required.';errEl.style.display='block';return;}
+  if(!status){errEl.textContent='Status is required.';errEl.style.display='block';return;}
+  const {error}=await sb.from('employees').update({
+    job_title:title, status,
+    department_id:document.getElementById('ee-dept').value||null,
+    manager_id:document.getElementById('ee-mgr').value||null,
+    location:document.getElementById('ee-location').value.trim(),
+    join_date:document.getElementById('ee-joindate').value||null,
+    phone:document.getElementById('ee-phone').value.trim(),
+    work_mode:document.getElementById('ee-workmode').value||null,
+    working_hours:document.getElementById('ee-hours').value.trim(),
+    biography:document.getElementById('ee-bio').value.trim(),
+    current_client:document.getElementById('ee-client').value.trim(),
+    current_project:document.getElementById('ee-project').value.trim(),
+    project_start:document.getElementById('ee-pstart').value||null,
+    project_end:document.getElementById('ee-pend').value||null,
+    lca_duties:document.getElementById('ee-lca').value.trim(),
+    updated_at:new Date().toISOString()
+  }).eq('id',empId);
   if(error){errEl.textContent=error.message;errEl.style.display='block';return;}
   const vt=document.getElementById('ee-visa').value;
-  if(vt){await sb.from('visa_details').upsert({tenant_id:tid(),employee_id:empId,visa_type:vt,visa_expiry_date:document.getElementById('ee-vexp').value||null,updated_at:new Date().toISOString()},{onConflict:'employee_id'});}
+  if(vt){
+    await sb.from('visa_details').upsert({
+      tenant_id:tid(), employee_id:empId,
+      visa_type:vt,
+      visa_expiry_date:document.getElementById('ee-vexp').value||null,
+      country_of_origin:document.getElementById('ee-country').value.trim()||null,
+      updated_at:new Date().toISOString()
+    },{onConflict:'employee_id'});
+  }
   closeModal();showToast('✓ Employee updated.');navigate(currentPage);
 }
 
