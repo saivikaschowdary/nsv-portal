@@ -941,7 +941,7 @@ async function navigate(page){
   else if(page==='projects')  el.innerHTML=await rProjects();
   else if(page==='reviews')   el.innerHTML=await rReviews();
   else if(page==='users')     el.innerHTML=await rUsers();
-  else if(page==='settings'){ el.innerHTML=await rSettings(); await window.loadDeptList(); }
+  else if(page==='settings'){ el.innerHTML=await rSettings(); setTimeout(async()=>{ await window.loadDeptList(); }, 50); }
 }
 
 // ── Helpers ────────────────────────────────────────────────
