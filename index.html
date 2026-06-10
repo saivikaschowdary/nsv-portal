@@ -256,6 +256,7 @@ tr:hover td{background:var(--surface)}
       <a onclick="navigate('visas')" id="nav-visas">Visas</a>
       <a onclick="navigate('projects')" id="nav-projects">Projects</a>
       <a onclick="navigate('reviews')" id="nav-reviews">Evaluations</a>
+      <a onclick="navigate('timesheets')" id="nav-timesheets">Timesheets</a>
       <a onclick="navigate('users')" id="nav-users">Users</a>
       <a onclick="navigate('settings')" id="nav-settings" style="display:none">Settings</a>
     </div>
@@ -281,6 +282,7 @@ tr:hover td{background:var(--surface)}
         <div class="nav-item" onclick="navigate('visas')" id="side-visas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Visa Tracker</div>
         <div class="nav-item" onclick="navigate('projects')" id="side-projects"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Project Tracker</div>
         <div class="nav-item" onclick="navigate('reviews')" id="side-reviews"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Evaluations</div>
+        <div class="nav-item" onclick="navigate('timesheets')" id="side-timesheets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Timesheets</div>
         <div class="nav-item" onclick="navigate('users')" id="side-users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>Manage Users</div>
         <div class="nav-item" onclick="navigate('settings')" id="side-settings" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</div>
       </div>
@@ -732,6 +734,170 @@ window.deleteDept = async function(id, name){
   window.loadDeptList();
 };
 
+
+// ════════════════════════════════════════════════════════════
+// TIMESHEETS
+// ════════════════════════════════════════════════════════════
+async function rTimesheets(){
+  const {data:tsRaw}=await sb.from('timesheets').select('*').eq('tenant_id',tid()).order('week_start',{ascending:false});
+  const {data:empProfiles}=await sb.from('v_employee_profile').select('employee_id,full_name').eq('tenant_id',tid());
+  const empMap={};(empProfiles||[]).forEach(e=>empMap[e.employee_id]=e.full_name);
+  const list=tsRaw||[];
+  const pending=list.filter(t=>t.status==='Submitted');
+  const others=list.filter(t=>t.status!=='Submitted');
+
+  const tsRow=t=>`<tr>
+    <td><strong>${empMap[t.employee_id]||'Unknown'}</strong></td>
+    <td style="color:var(--ink-3)">${t.week_start} – ${t.week_end}</td>
+    <td style="font-weight:600">${t.total_hours||0}h</td>
+    <td style="color:var(--ink-3);font-size:0.78rem">${t.project||'—'}</td>
+    <td><span class="badge badge-${t.status==='Approved'?'green':t.status==='Rejected'?'red':t.status==='Draft'?'gray':'amber'}">${t.status}</span></td>
+    <td><button class="btn btn-ghost btn-sm" onclick="viewTimesheet('${t.id}')">View →</button></td>
+  </tr>`;
+
+  return`<div class="page-header"><div><h2>Timesheets</h2><p>${pending.length} pending approval</p></div></div>
+  <div class="page-body">
+    ${pending.length?`
+    <div style="font-size:0.69rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:8px">Pending (${pending.length})</div>
+    <div class="card table-wrap" style="margin-bottom:16px"><table>
+      <thead><tr><th>Employee</th><th>Week</th><th>Hours</th><th>Project</th><th>Status</th><th></th></tr></thead>
+      <tbody>${pending.map(tsRow).join('')}</tbody>
+    </table></div>`:''}
+    <div style="font-size:0.69rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:8px">All Timesheets (${others.length})</div>
+    <div class="card table-wrap"><table>
+      <thead><tr><th>Employee</th><th>Week</th><th>Hours</th><th>Project</th><th>Status</th><th></th></tr></thead>
+      <tbody>${others.length?others.map(tsRow).join(''):'<tr><td colspan="6" style="text-align:center;padding:26px;color:var(--ink-3)">No timesheets yet.</td></tr>'}</tbody>
+    </table></div>
+  </div>`;
+}
+
+window.viewTimesheet = async function(id){
+  const {data:t}=await sb.from('timesheets').select('*').eq('id',id).single();
+  if(!t)return;
+  const {data:ep}=await sb.from('v_employee_profile').select('full_name').eq('employee_id',t.employee_id).maybeSingle();
+  const name=ep?.full_name||'Unknown';
+  const days=[
+    {label:'Monday',val:t.monday_hours||0},
+    {label:'Tuesday',val:t.tuesday_hours||0},
+    {label:'Wednesday',val:t.wednesday_hours||0},
+    {label:'Thursday',val:t.thursday_hours||0},
+    {label:'Friday',val:t.friday_hours||0},
+    {label:'Saturday',val:t.saturday_hours||0},
+    {label:'Sunday',val:t.sunday_hours||0}
+  ];
+  const canApprove = ['admin','manager'].includes(currentProfile?.role) && t.status==='Submitted';
+  showModal(`
+  <div class="modal-header"><h3>${name} — Week of ${t.week_start}</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      <span class="badge badge-${t.status==='Approved'?'green':t.status==='Rejected'?'red':t.status==='Draft'?'gray':'amber'}">${t.status}</span>
+      <span class="badge badge-gray">${t.total_hours||0} total hours</span>
+      ${t.project?`<span class="badge badge-blue">${t.project}</span>`:''}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:12px">
+      ${days.map(d=>`<div style="background:var(--surface-2);border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:0.6rem;text-transform:uppercase;color:var(--ink-3);margin-bottom:3px">${d.label.slice(0,3)}</div>
+        <div style="font-weight:700;font-size:0.9rem;color:${d.val>0?'var(--accent)':'var(--ink-3)'}">${d.val}h</div>
+      </div>`).join('')}
+    </div>
+    ${t.tasks?`<div style="background:var(--surface-2);border-radius:9px;padding:11px;margin-bottom:9px"><div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px">Tasks</div><div style="font-size:0.82rem">${t.tasks}</div></div>`:''}
+    ${t.notes?`<div style="background:var(--surface-2);border-radius:9px;padding:11px;margin-bottom:9px"><div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px">Notes</div><div style="font-size:0.82rem">${t.notes}</div></div>`:''}
+    ${canApprove?`<div style="margin-top:12px"><div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px">Comment</div>
+    <textarea id="ts-comment" rows="2" style="width:100%;padding:8px 11px;border:1.5px solid var(--border-strong);border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:0.82rem;resize:vertical">${t.manager_comment||''}</textarea></div>`:''}
+    ${t.manager_comment&&!canApprove?`<div style="background:var(--accent-light);border-radius:9px;padding:11px;margin-top:9px"><div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--accent);margin-bottom:5px">Manager Comment</div><div style="font-size:0.82rem">${t.manager_comment}</div></div>`:''}
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+    ${canApprove?`<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="window.rejectTimesheet('${id}')">✗ Reject</button><button class="btn btn-primary" onclick="window.approveTimesheet('${id}')">✓ Approve</button>`:''}
+  </div>`);
+};
+
+window.approveTimesheet = async function(id){
+  const comment=document.getElementById('ts-comment')?.value||'';
+  await sb.from('timesheets').update({status:'Approved',manager_comment:comment,reviewed_by:currentUser.id}).eq('id',id);
+  closeModal();showToast('✓ Timesheet approved.');navigate('timesheets');
+};
+
+window.rejectTimesheet = async function(id){
+  const comment=document.getElementById('ts-comment')?.value||'';
+  if(!comment){showToast('Please add a comment explaining the rejection.');return;}
+  await sb.from('timesheets').update({status:'Rejected',manager_comment:comment,reviewed_by:currentUser.id}).eq('id',id);
+  closeModal();showToast('Timesheet rejected.');navigate('timesheets');
+};
+
+// Employee timesheet submission
+window.openSubmitTimesheet = async function(){
+  // Calculate current week start (Monday)
+  const today=new Date();
+  const day=today.getDay();
+  const diff=today.getDate()-day+(day===0?-6:1);
+  const monday=new Date(today.setDate(diff));
+  const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);
+  const fmt=d=>d.toISOString().split('T')[0];
+
+  const {data:empRec}=await sb.from('employees').select('id,current_project,current_client').eq('profile_id',currentUser.id).maybeSingle();
+
+  showModal(`
+  <div class="modal-header"><h3>Submit Timesheet</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    <div class="form-grid" style="margin-bottom:12px">
+      <div class="form-group"><label>Week Start (Monday)</label><input type="date" id="ts-wstart" value="${fmt(monday)}"></div>
+      <div class="form-group"><label>Week End (Sunday)</label><input type="date" id="ts-wend" value="${fmt(sunday)}"></div>
+      <div class="form-group full"><label>Project</label><input id="ts-project" value="${empRec?.current_project||''}" placeholder="Project name"></div>
+      <div class="form-group full"><label>Client</label><input id="ts-client" value="${empRec?.current_client||''}" placeholder="Client name"></div>
+    </div>
+    <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:10px">Hours per Day</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:12px">
+      ${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d,i)=>`<div>
+        <div style="font-size:0.65rem;text-align:center;color:var(--ink-3);margin-bottom:4px">${d}</div>
+        <input type="number" id="ts-d${i}" min="0" max="24" step="0.5" value="${i<5?8:0}" style="width:100%;text-align:center;padding:6px 4px" oninput="window.calcTsTotal()">
+      </div>`).join('')}
+    </div>
+    <div style="background:var(--accent-light);border-radius:8px;padding:10px 12px;font-size:0.82rem;color:var(--accent);margin-bottom:12px;display:flex;justify-content:space-between">
+      <span>Total Hours</span><strong id="ts-total">40</strong>
+    </div>
+    <div class="form-group"><label>Tasks Completed</label><textarea id="ts-tasks" rows="2" style="resize:vertical" placeholder="Describe tasks completed this week"></textarea></div>
+    <div class="form-group"><label>Notes</label><textarea id="ts-notes" rows="2" style="resize:vertical" placeholder="Any additional notes"></textarea></div>
+    <div id="ts-err" style="display:none;background:var(--red-light);border-radius:8px;padding:9px 12px;font-size:0.79rem;color:var(--red);margin-top:9px"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="window.submitTimesheet('${empRec?.id}')">Submit Timesheet</button>
+  </div>`);
+};
+
+window.calcTsTotal = function(){
+  const total=[0,1,2,3,4,5,6].reduce((sum,i)=>sum+(parseFloat(document.getElementById('ts-d'+i)?.value)||0),0);
+  const el=document.getElementById('ts-total');
+  if(el) el.textContent=total;
+};
+
+window.submitTimesheet = async function(empId){
+  const errEl=document.getElementById('ts-err');
+  const wstart=document.getElementById('ts-wstart').value;
+  const wend=document.getElementById('ts-wend').value;
+  if(!wstart||!wend){errEl.textContent='Week dates are required.';errEl.style.display='block';return;}
+  const hours=[0,1,2,3,4,5,6].map(i=>parseFloat(document.getElementById('ts-d'+i)?.value)||0);
+  const total=hours.reduce((a,b)=>a+b,0);
+  if(total===0){errEl.textContent='Please enter hours for at least one day.';errEl.style.display='block';return;}
+  const {error}=await sb.from('timesheets').insert({
+    tenant_id:currentTenant.id, employee_id:empId,
+    week_start:wstart, week_end:wend,
+    monday_hours:hours[0], tuesday_hours:hours[1], wednesday_hours:hours[2],
+    thursday_hours:hours[3], friday_hours:hours[4], saturday_hours:hours[5], sunday_hours:hours[6],
+    total_hours:total,
+    project:document.getElementById('ts-project').value.trim(),
+    client:document.getElementById('ts-client').value.trim(),
+    tasks:document.getElementById('ts-tasks').value.trim(),
+    notes:document.getElementById('ts-notes').value.trim(),
+    status:'Submitted'
+  });
+  if(error){errEl.textContent=error.message;errEl.style.display='block';return;}
+  closeModal();
+  showToast('✓ Timesheet submitted successfully!');
+  await renderEmployeeDashboard();
+};
+
 async function platformNav(page){
   document.querySelectorAll('[id^="pnav-"]').forEach(e=>e.classList.remove('active'));
   document.getElementById('pnav-'+page)?.classList.add('active');
@@ -944,6 +1110,7 @@ async function navigate(page){
   else if(page==='visas')     el.innerHTML=await rVisa();
   else if(page==='projects')  el.innerHTML=await rProjects();
   else if(page==='reviews')   el.innerHTML=await rReviews();
+  else if(page==='timesheets') el.innerHTML=await rTimesheets();
   else if(page==='users')     el.innerHTML=await rUsers();
   else if(page==='settings'){ el.innerHTML=await rSettings(); setTimeout(async()=>{ await window.loadDeptList(); }, 50); }
 }
@@ -1603,7 +1770,10 @@ async function renderEmployeeDashboard(){
     <div class="card card-padded">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div><div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3)">My Reviews</div><div style="font-size:0.75rem;color:var(--ink-3);margin-top:2px">${(revs||[]).length} total</div></div>
-        <button class="btn btn-primary btn-sm" onclick="openSelfReview()">+ Submit Review</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="window.openSubmitTimesheet()">+ Timesheet</button>
+          <button class="btn btn-primary btn-sm" onclick="openSelfReview()">+ Submit Review</button>
+        </div>
       </div>
       ${reviewHtml||'<div style="text-align:center;padding:28px;color:var(--ink-3);font-size:0.81rem">No reviews yet.</div>'}
     </div>
