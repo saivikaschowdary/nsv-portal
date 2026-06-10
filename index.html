@@ -946,10 +946,7 @@ window.editMyTimesheet = async function(tsId){
     </div>
     <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:10px">Hours per Day</div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:12px">
-      ${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d,i)=>{const vals=[t.monday_hours,t.tuesday_hours,t.wednesday_hours,t.thursday_hours,t.friday_hours,t.saturday_hours,t.sunday_hours];return`<div>
-        <div style="font-size:0.65rem;text-align:center;color:var(--ink-3);margin-bottom:4px">${d}</div>
-        <input type="number" id="ets-d${i}" min="0" max="24" step="0.5" value="${vals[i]||0}" style="width:100%;text-align:center;padding:6px 4px" oninput="window.calcEtsTotal()">
-      </div>`}).join('')}
+      ${(()=>{const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];const vals=[t.monday_hours,t.tuesday_hours,t.wednesday_hours,t.thursday_hours,t.friday_hours,t.saturday_hours,t.sunday_hours];return days.map((d,i)=>'<div><div style="font-size:0.65rem;text-align:center;color:var(--ink-3);margin-bottom:4px">'+d+'</div><input type="number" id="ets-d'+i+'" min="0" max="24" step="0.5" value="'+(vals[i]||0)+'" style="width:100%;text-align:center;padding:6px 4px" oninput="window.calcEtsTotal()"></div>').join('');})()}
     </div>
     <div style="background:var(--accent-light);border-radius:8px;padding:10px 12px;font-size:0.82rem;color:var(--accent);margin-bottom:12px;display:flex;justify-content:space-between">
       <span>Total Hours</span><strong id="ets-total">${t.total_hours||0}</strong>
