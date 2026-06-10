@@ -772,33 +772,45 @@ async function saveNewCompany(){
 // ════════════════════════════════════════════════════════════
 function sendWelcomeEmail(toEmail, toName, companyName, tempPw, role, slug){
   const portalLink = slug ? `${PORTAL_URL}?company=${slug}` : PORTAL_URL;
-  const subject = encodeURIComponent(`Welcome to ${companyName} — Your ${role} Portal Access`);
+  const isEmployee = role === 'Employee';
+  const isManager = role === 'Manager';
+  const portalType = isEmployee ? 'Employee Portal' : isManager ? 'Manager Portal' : 'Admin / HR Portal';
+  const subject = encodeURIComponent(`Welcome to ${companyName} — Your ${portalType} Access`);
   const body = encodeURIComponent(
 `Hi ${toName},
 
-Your ${role} account has been set up on the NSV Employee Management Platform for ${companyName}.
+Welcome to ${companyName}! Your ${portalType} account has been created on the NSV Employee Management Platform.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
-PORTAL LINK: ${portalLink}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━
+════════════════════════════════════
+YOUR PORTAL LINK
+${portalLink}
+════════════════════════════════════
 
-LOGIN CREDENTIALS
+YOUR LOGIN CREDENTIALS
   Email:    ${toEmail}
   Password: ${tempPw}
 
-⚠️  IMPORTANT: You will be required to set a new password when you first log in.
+════════════════════════════════════
+FIRST TIME LOGIN STEPS
+════════════════════════════════════
+  1. Click the portal link above
+  2. Click "${isEmployee ? 'Employee Portal →' : isManager ? 'Manager Portal →' : 'Sign In'}"
+  3. Enter your email and temporary password above
+  4. You will be prompted to set a new permanent password
+  5. Complete your profile setup
+  6. You're all set!
 
-HOW TO LOGIN
-  1. Open the portal link above
-  2. Click "Sign In"
-  3. Enter your email and temporary password
-  4. Set your new permanent password
-  5. You're in!
-
-If you have any questions, reply to this email.
+════════════════════════════════════
+IMPORTANT NOTES
+════════════════════════════════════
+  • Keep this email safe — it contains your login credentials
+  • Your temporary password expires after first use
+  • Never share your password with anyone
+  • Contact your HR admin if you need any help
 
 Best regards,
-NSV Platform
+NSV Employee Management Platform
+${companyName} HR Team
 ${portalLink}`
   );
   window.open(`mailto:${toEmail}?subject=${subject}&body=${body}`);
