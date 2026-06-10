@@ -1074,6 +1074,7 @@ async function editEmployee(empId){
     <div class="form-grid">
       <div class="form-group full"><label>Current Client</label><input id="ee-client" value="${e.current_client||''}"></div>
       <div class="form-group full"><label>Current Project</label><input id="ee-project" value="${e.current_project||''}"></div>
+      <div class="form-group full"><label>Vendor</label><input id="ee-vendor" value="${e.current_vendor||''}" placeholder="e.g. Infosys, TCS, Wipro"></div>
       <div class="form-group"><label>Project Start</label><input type="date" id="ee-pstart" value="${e.project_start||''}"></div>
       <div class="form-group"><label>Project End</label><input type="date" id="ee-pend" value="${e.project_end||''}"></div>
     </div>
