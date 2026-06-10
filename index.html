@@ -941,7 +941,7 @@ async function navigate(page){
   else if(page==='projects')  el.innerHTML=await rProjects();
   else if(page==='reviews')   el.innerHTML=await rReviews();
   else if(page==='users')     el.innerHTML=await rUsers();
-  else if(page==='settings')  el.innerHTML=await rSettings();
+  else if(page==='settings'){ el.innerHTML=await rSettings(); await window.loadDeptList(); }
 }
 
 // ── Helpers ────────────────────────────────────────────────
@@ -1441,8 +1441,7 @@ async function rSettings(){
     </div>
     <div id="settings-msg" style="display:none;margin-top:10px;font-size:0.79rem;border-radius:8px;padding:9px 12px"></div>
   </div>`;
-  // Load departments after render
-  setTimeout(window.loadDeptList, 100);
+
 }
 
 async function saveSettings(){
