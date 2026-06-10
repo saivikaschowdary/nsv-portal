@@ -1458,23 +1458,38 @@ window.openEditMyProfile = async function(){
   showModal(`
   <div class="modal-header"><h3>Edit My Profile</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">X</button></div>
   <div class="modal-body">
+
+    <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:10px">Personal Info</div>
     <div class="form-grid">
       <div class="form-group"><label>Preferred Name</label><input id="ep-prefname" value="${emp?.preferred_name||''}"></div>
       <div class="form-group"><label>Phone</label><input id="ep-phone" value="${emp?.phone||''}"></div>
       <div class="form-group"><label>Work Mode</label><select id="ep-workmode"><option value="">Select...</option><option ${emp?.work_mode==='Office'?'selected':''}>Office</option><option ${emp?.work_mode==='Hybrid'?'selected':''}>Hybrid</option><option ${emp?.work_mode==='Remote'?'selected':''}>Remote</option></select></div>
-      <div class="form-group"><label>Working Hours</label><input id="ep-hours" value="${emp?.working_hours||''}" placeholder="e.g. 9am-5pm"></div>
+      <div class="form-group"><label>Working Hours</label><input id="ep-hours" value="${emp?.working_hours||''}" placeholder="e.g. 9am-5pm EST"></div>
     </div>
     <div class="form-group"><label>Biography</label><textarea id="ep-bio" rows="3">${emp?.biography||''}</textarea></div>
-    <div class="form-group"><label>Certifications</label><input id="ep-certs" value="${emp?.certifications||''}"></div>
-    <div class="form-group"><label>Additional Skills</label><input id="ep-skills" value="${emp?.additional_skills||''}"></div>
-    <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin:14px 0 10px;padding-top:12px;border-top:1px solid var(--border)">LCA / Visa Duties</div>
-    <div class="form-group"><label>LCA Job Duties</label><textarea id="ep-lca" rows="2" style="resize:vertical" placeholder="Describe your LCA job duties...">${emp?.lca_duties||''}</textarea></div>
+    <div class="form-group"><label>Certifications</label><input id="ep-certs" value="${emp?.certifications||''}" placeholder="e.g. AWS, PMP, CPA"></div>
+    <div class="form-group"><label>Additional Skills</label><input id="ep-skills" value="${emp?.additional_skills||''}" placeholder="e.g. Python, React, SQL"></div>
+
+    <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin:14px 0 10px;padding-top:12px;border-top:1px solid var(--border)">LCA Job Duties</div>
+    <div class="form-group"><textarea id="ep-lca" rows="3" style="resize:vertical" placeholder="Describe your LCA job duties...">${emp?.lca_duties||''}</textarea></div>
+
     <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin:14px 0 10px;padding-top:12px;border-top:1px solid var(--border)">Emergency Contact</div>
     <div class="form-grid">
       <div class="form-group"><label>Name</label><input id="ep-ename" value="${emp?.emergency_name||''}"></div>
       <div class="form-group"><label>Relationship</label><input id="ep-erel" value="${emp?.emergency_rel||''}"></div>
       <div class="form-group full"><label>Phone</label><input id="ep-ephone" value="${emp?.emergency_phone||''}"></div>
     </div>
+
+    <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin:14px 0 10px;padding-top:12px;border-top:1px solid var(--border)">Read-Only (Set by HR)</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Job Title</label><input value="${emp?.job_title||'—'}" disabled style="background:var(--surface-2);color:var(--ink-3)"></div>
+      <div class="form-group"><label>Department</label><input value="${emp?.department_name||'—'}" disabled style="background:var(--surface-2);color:var(--ink-3)"></div>
+      <div class="form-group"><label>Manager</label><input value="${emp?.manager_name||'—'}" disabled style="background:var(--surface-2);color:var(--ink-3)"></div>
+      <div class="form-group"><label>Join Date</label><input value="${emp?.join_date||'—'}" disabled style="background:var(--surface-2);color:var(--ink-3)"></div>
+      <div class="form-group"><label>Current Project</label><input value="${emp?.current_project||'—'}" disabled style="background:var(--surface-2);color:var(--ink-3)"></div>
+      <div class="form-group"><label>Status</label><input value="${emp?.status||'—'}" disabled style="background:var(--surface-2);color:var(--ink-3)"></div>
+    </div>
+
     <div id="ep-err" style="display:none;background:var(--red-light);border-radius:8px;padding:9px 12px;font-size:0.79rem;color:var(--red);margin-top:9px"></div>
   </div>
   <div class="modal-footer">
