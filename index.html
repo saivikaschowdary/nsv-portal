@@ -965,10 +965,25 @@ async function rTeam(){
 async function rEmployees(){
   const { data } = await sb.from('v_employee_profile').select('*').eq('tenant_id',tid()).order('full_name');
   const list=data||[];
+  const depts=[...new Set(list.map(e=>e.department_name).filter(Boolean))].sort();
   return`<div class="page-header"><div><h2>Employees</h2><p>${list.length} total</p></div><button class="btn btn-primary btn-sm" onclick="openAddEmployee()">+ Add Employee</button></div>
-  <div class="page-body"><div class="card table-wrap"><table>
+  <div class="page-body">
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <input id="emp-search" placeholder="Search by name, email, title..." style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;font-family:'DM Sans',sans-serif" oninput="filterEmployeeTable()">
+      <select id="emp-dept-filter" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;font-family:'DM Sans',sans-serif" onchange="filterEmployeeTable()">
+        <option value="">All Departments</option>
+        ${depts.map(d=>`<option value="${d}">${d}</option>`).join('')}
+      </select>
+      <select id="emp-status-filter" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;font-family:'DM Sans',sans-serif" onchange="filterEmployeeTable()">
+        <option value="">All Statuses</option>
+        <option value="Active">Active</option>
+        <option value="Bench">Bench</option>
+        <option value="Inactive">Inactive</option>
+      </select>
+    </div>
+  <div class="card table-wrap"><table id="emp-table">
     <thead><tr><th>Name</th><th>Title</th><th>Department</th><th>Manager</th><th>Status</th><th>Visa</th><th></th></tr></thead>
-    <tbody>${list.length?list.map((e,i)=>`<tr>
+    <tbody>${list.length?list.map((e,i)=>`<tr data-name="${(e.full_name||'').toLowerCase()}" data-email="${(e.email||'').toLowerCase()}" data-title="${(e.job_title||'').toLowerCase()}" data-dept="${e.department_name||''}" data-status="${e.status||'Active'}">
       <td><div class="emp-cell">${mkAv(e.full_name,i)}<div><span class="emp-cell-name">${e.full_name}</span><span class="emp-cell-sub">${e.email}</span></div></div></td>
       <td>${e.job_title||'—'}</td><td>${e.department_name||'—'}</td><td>${e.manager_name||'—'}</td>
       <td>${sBadge(e.status||'Active')}</td>
