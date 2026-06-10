@@ -649,6 +649,85 @@ window.filterEmployeeTable = function(){
   });
 };
 
+
+window.loadDeptList = async function(){
+  const el = document.getElementById('dept-list');
+  if(!el) return;
+  const {data:depts} = await sb.from('departments').select('*').eq('tenant_id',tid()).order('name');
+  if(!depts||depts.length===0){
+    el.innerHTML='<div style="color:var(--ink-3);font-size:0.81rem;text-align:center;padding:14px">No departments yet.</div>';
+    return;
+  }
+  el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:0.82rem">
+    <thead><tr style="border-bottom:1px solid var(--border)"><th style="padding:8px;text-align:left">Department Name</th><th style="padding:8px;text-align:right"></th></tr></thead>
+    <tbody>${depts.map(d=>`<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:8px;font-weight:500">${d.name}</td>
+      <td style="padding:8px;text-align:right;display:flex;gap:6px;justify-content:flex-end">
+        <button class="btn btn-ghost btn-sm" onclick="window.editDept('${d.id}','${d.name}')">Edit</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="window.deleteDept('${d.id}','${d.name}')">Delete</button>
+      </td>
+    </tr>`).join('')}
+    </tbody>
+  </table>`;
+};
+
+window.openAddDept = function(){
+  showModal(`
+  <div class="modal-header"><h3>Add Department</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    <div class="form-group"><label>Department Name *</label><input id="nd-name" placeholder="e.g. Engineering"></div>
+    <div id="nd-err" style="display:none;background:var(--red-light);border-radius:8px;padding:9px 12px;font-size:0.79rem;color:var(--red);margin-top:9px"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="window.saveDept()">Add Department</button>
+  </div>`);
+  setTimeout(()=>document.getElementById('nd-name')?.focus(),100);
+};
+
+window.saveDept = async function(){
+  const name = document.getElementById('nd-name').value.trim();
+  const errEl = document.getElementById('nd-err');
+  if(!name){ errEl.textContent='Department name is required.'; errEl.style.display='block'; return; }
+  const {error} = await sb.from('departments').insert({tenant_id:tid(), name});
+  if(error){ errEl.textContent='Error: '+error.message; errEl.style.display='block'; return; }
+  closeModal();
+  showToast('✓ Department added.');
+  window.loadDeptList();
+};
+
+window.editDept = function(id, name){
+  showModal(`
+  <div class="modal-header"><h3>Edit Department</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    <div class="form-group"><label>Department Name *</label><input id="ed-name" value="${name}"></div>
+    <div id="ed-err" style="display:none;background:var(--red-light);border-radius:8px;padding:9px 12px;font-size:0.79rem;color:var(--red);margin-top:9px"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="window.updateDept('${id}')">Save</button>
+  </div>`);
+};
+
+window.updateDept = async function(id){
+  const name = document.getElementById('ed-name').value.trim();
+  const errEl = document.getElementById('ed-err');
+  if(!name){ errEl.textContent='Department name is required.'; errEl.style.display='block'; return; }
+  const {error} = await sb.from('departments').update({name}).eq('id',id);
+  if(error){ errEl.textContent='Error: '+error.message; errEl.style.display='block'; return; }
+  closeModal();
+  showToast('✓ Department updated.');
+  window.loadDeptList();
+};
+
+window.deleteDept = async function(id, name){
+  if(!confirm(`Delete department "${name}"? Employees in this department will be unassigned.`)) return;
+  const {error} = await sb.from('departments').delete().eq('id',id);
+  if(error){ showToast('Error: '+error.message); return; }
+  showToast('✓ Department deleted.');
+  window.loadDeptList();
+};
+
 async function platformNav(page){
   document.querySelectorAll('[id^="pnav-"]').forEach(e=>e.classList.remove('active'));
   document.getElementById('pnav-'+page)?.classList.add('active');
@@ -1349,11 +1428,21 @@ async function rSettings(){
       </div>
     </div>
 
+    <div class="card card-padded" style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3)">Departments</div>
+        <button class="btn btn-primary btn-sm" onclick="window.openAddDept()">+ Add Department</button>
+      </div>
+      <div id="dept-list">Loading...</div>
+    </div>
+
     <div style="display:flex;justify-content:flex-end;gap:8px">
       <button class="btn btn-primary" onclick="saveSettings()">Save Changes</button>
     </div>
     <div id="settings-msg" style="display:none;margin-top:10px;font-size:0.79rem;border-radius:8px;padding:9px 12px"></div>
   </div>`;
+  // Load departments after render
+  setTimeout(window.loadDeptList, 100);
 }
 
 async function saveSettings(){
