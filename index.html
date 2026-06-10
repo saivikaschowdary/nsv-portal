@@ -1439,7 +1439,10 @@ async function renderEmployeeDashboard(){
         ${emp?.visa_type?`<div style="font-weight:600;font-size:0.92rem;margin-bottom:4px">${emp.visa_type}</div><div style="font-size:0.78rem;color:var(--ink-3);margin-bottom:6px">Expires: ${emp.visa_expiry_date||'—'}</div><div style="font-weight:700;color:${(emp.days_until_visa_expiry||999)<90?'var(--red)':'var(--accent)'};font-size:0.85rem">${emp.days_until_visa_expiry!==null?(emp.days_until_visa_expiry<0?'Expired':`${emp.days_until_visa_expiry} days left`):'—'}</div>`:'<div style="color:var(--ink-3);font-size:0.81rem">No visa on record</div>'}
       </div>
     </div>
-    ${emp?.emergency_name?`<div class="card card-padded" style="margin-bottom:16px"><div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:10px">Emergency Contact</div><div style="font-size:0.85rem"><span style="font-weight:500">${emp.emergency_name}</span> · ${emp.emergency_phone||'—'}</div></div>`:''}
+    ${emp?.biography?`<div class="card card-padded" style="margin-bottom:16px"><div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:10px">Biography</div><div style="font-size:0.84rem;line-height:1.6;color:var(--ink-2)">${emp.biography}</div></div>`:''}
+    ${emp?.certifications||emp?.additional_skills?`<div class="card card-padded" style="margin-bottom:16px"><div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:10px">Skills & Certifications</div>${emp?.certifications?`<div style="margin-bottom:6px"><div style="font-size:0.63rem;text-transform:uppercase;color:var(--ink-3);margin-bottom:2px">Certifications</div><div style="font-size:0.84rem">${emp.certifications}</div></div>`:''} ${emp?.additional_skills?`<div><div style="font-size:0.63rem;text-transform:uppercase;color:var(--ink-3);margin-bottom:2px">Additional Skills</div><div style="font-size:0.84rem">${emp.additional_skills}</div></div>`:''}</div>`:''}
+    ${emp?.lca_duties?`<div class="card card-padded" style="margin-bottom:16px"><div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:10px">LCA Job Duties</div><div style="font-size:0.84rem;line-height:1.6;color:var(--ink-2)">${emp.lca_duties}</div></div>`:''}
+    ${emp?.emergency_name?`<div class="card card-padded" style="margin-bottom:16px"><div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:10px">Emergency Contact</div><div style="font-size:0.85rem"><span style="font-weight:500">${emp.emergency_name}</span>${emp.emergency_rel?' ('+emp.emergency_rel+')':''} · ${emp.emergency_phone||'—'}</div></div>`:''}
     <div class="card card-padded">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div><div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3)">My Reviews</div><div style="font-size:0.75rem;color:var(--ink-3);margin-top:2px">${(revs||[]).length} total</div></div>
@@ -1464,6 +1467,8 @@ window.openEditMyProfile = async function(){
     <div class="form-group"><label>Biography</label><textarea id="ep-bio" rows="3">${emp?.biography||''}</textarea></div>
     <div class="form-group"><label>Certifications</label><input id="ep-certs" value="${emp?.certifications||''}"></div>
     <div class="form-group"><label>Additional Skills</label><input id="ep-skills" value="${emp?.additional_skills||''}"></div>
+    <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin:14px 0 10px;padding-top:12px;border-top:1px solid var(--border)">LCA / Visa Duties</div>
+    <div class="form-group"><label>LCA Job Duties</label><textarea id="ep-lca" rows="2" style="resize:vertical" placeholder="Describe your LCA job duties...">${emp?.lca_duties||''}</textarea></div>
     <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin:14px 0 10px;padding-top:12px;border-top:1px solid var(--border)">Emergency Contact</div>
     <div class="form-grid">
       <div class="form-group"><label>Name</label><input id="ep-ename" value="${emp?.emergency_name||''}"></div>
@@ -1490,6 +1495,7 @@ window.saveMyProfile = async function(){
     biography: document.getElementById('ep-bio').value.trim(),
     certifications: document.getElementById('ep-certs').value.trim(),
     additional_skills: document.getElementById('ep-skills').value.trim(),
+    lca_duties: document.getElementById('ep-lca').value.trim(),
     emergency_name: document.getElementById('ep-ename').value.trim(),
     emergency_rel: document.getElementById('ep-erel').value.trim(),
     emergency_phone: document.getElementById('ep-ephone').value.trim(),
