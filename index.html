@@ -635,6 +635,20 @@ window.showDashPopup = async function(type){
   showModal(`<div class="modal-header"><h3>${title}</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">X</button></div><div class="modal-body" style="max-height:60vh;overflow-y:auto">${html}</div><div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">Close</button></div>`);
 };
 
+
+window.filterEmployeeTable = function(){
+  const search = document.getElementById('emp-search')?.value.toLowerCase()||'';
+  const dept = document.getElementById('emp-dept-filter')?.value||'';
+  const status = document.getElementById('emp-status-filter')?.value||'';
+  const rows = document.querySelectorAll('#emp-table tbody tr');
+  rows.forEach(row=>{
+    const matchSearch = !search || row.dataset.name?.includes(search) || row.dataset.email?.includes(search) || row.dataset.title?.includes(search);
+    const matchDept = !dept || row.dataset.dept === dept;
+    const matchStatus = !status || row.dataset.status === status;
+    row.style.display = (matchSearch && matchDept && matchStatus) ? '' : 'none';
+  });
+};
+
 async function platformNav(page){
   document.querySelectorAll('[id^="pnav-"]').forEach(e=>e.classList.remove('active'));
   document.getElementById('pnav-'+page)?.classList.add('active');
