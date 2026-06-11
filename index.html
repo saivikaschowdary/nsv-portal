@@ -640,6 +640,24 @@ window.showDashPopup = async function(type){
     html=list.length===0?'<p style="color:var(--ink-3);text-align:center;padding:20px">No projects ending soon.</p>':`<table style="width:100%;border-collapse:collapse;font-size:0.81rem"><thead><tr style="border-bottom:1px solid var(--border)"><th style="padding:8px;text-align:left">Employee</th><th style="padding:8px;text-align:left">Project</th><th style="padding:8px;text-align:left">End Date</th><th style="padding:8px;text-align:left">Days Left</th></tr></thead><tbody>${list.map((e,i)=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px"><div style="display:flex;align-items:center;gap:8px">${mkAv(e.full_name,i)}<span style="font-weight:500">${e.full_name}</span></div></td><td style="padding:8px;color:var(--ink-3)">${e.current_project||'—'}</td><td style="padding:8px;color:var(--ink-3)">${e.project_end}</td><td style="padding:8px;font-weight:700;color:${e.daysLeft<30?'var(--red)':'var(--amber)'}">${e.daysLeft<0?'Ended':`${e.daysLeft}d`}</td></tr>`).join('')}</tbody></table>`;
   }
 
+  else if(type==='timesheets'){
+    const {data:tsRaw}=await sb.from('timesheets').select('*').eq('tenant_id',tid()).eq('status','Submitted').order('week_start',{ascending:false});
+    const {data:empProfiles}=await sb.from('v_employee_profile').select('employee_id,full_name').eq('tenant_id',tid());
+    const empMap={};(empProfiles||[]).forEach(e=>empMap[e.employee_id]=e.full_name);
+    const list=tsRaw||[];
+    title='Pending Timesheets';
+    html=list.length===0?'<p style="color:var(--ink-3);text-align:center;padding:20px">No pending timesheets.</p>':`<table style="width:100%;border-collapse:collapse;font-size:0.81rem"><thead><tr style="border-bottom:1px solid var(--border)"><th style="padding:8px;text-align:left">Employee</th><th style="padding:8px;text-align:left">Week</th><th style="padding:8px;text-align:left">Hours</th><th style="padding:8px;text-align:left">Project</th><th style="padding:8px"></th></tr></thead><tbody>${list.map(t=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px;font-weight:500">${empMap[t.employee_id]||'Unknown'}</td><td style="padding:8px;color:var(--ink-3)">${t.week_start} – ${t.week_end}</td><td style="padding:8px;font-weight:600">${t.total_hours||0}h</td><td style="padding:8px;color:var(--ink-3)">${t.project||'—'}</td><td style="padding:8px"><button class="btn btn-ghost btn-sm" onclick="closeModal();viewTimesheet('${t.id}')">Review →</button></td></tr>`).join('')}</tbody></table>`;
+  }
+
+  else if(type==='leaves'){
+    const {data:lrRaw}=await sb.from('leave_requests').select('*').eq('tenant_id',tid()).eq('status','Pending').order('created_at',{ascending:false});
+    const {data:empProfiles}=await sb.from('v_employee_profile').select('employee_id,full_name').eq('tenant_id',tid());
+    const empMap={};(empProfiles||[]).forEach(e=>empMap[e.employee_id]=e.full_name);
+    const list=lrRaw||[];
+    title='Pending Leave Requests';
+    html=list.length===0?'<p style="color:var(--ink-3);text-align:center;padding:20px">No pending leave requests.</p>':`<table style="width:100%;border-collapse:collapse;font-size:0.81rem"><thead><tr style="border-bottom:1px solid var(--border)"><th style="padding:8px;text-align:left">Employee</th><th style="padding:8px;text-align:left">Type</th><th style="padding:8px;text-align:left">Dates</th><th style="padding:8px;text-align:left">Days</th><th style="padding:8px"></th></tr></thead><tbody>${list.map(l=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px;font-weight:500">${empMap[l.employee_id]||'Unknown'}</td><td style="padding:8px"><span class="badge badge-gray">${l.leave_type}</span></td><td style="padding:8px;color:var(--ink-3)">${l.start_date} – ${l.end_date}</td><td style="padding:8px;font-weight:600">${l.total_days}d</td><td style="padding:8px"><button class="btn btn-ghost btn-sm" onclick="closeModal();window.viewLeave('${l.id}')">Review →</button></td></tr>`).join('')}</tbody></table>`;
+  }
+
   showModal(`<div class="modal-header"><h3>${title}</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">X</button></div><div class="modal-body" style="max-height:60vh;overflow-y:auto">${html}</div><div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">Close</button></div>`);
 };
 
@@ -1536,8 +1554,8 @@ async function rDash(){
       <div class="metric-card mc-blue" style="cursor:pointer" onclick="showDashPopup('bench')"><div class="metric-label">On Bench</div><div class="metric-val cv-blue">${bench}</div><div class="metric-sub">${active} active · click for overview →</div></div>
       <div class="metric-card mc-red" style="cursor:pointer" onclick="showDashPopup('visas')"><div class="metric-label">Visa Expiring</div><div class="metric-val cv-red">${visaExp}</div><div class="metric-sub">Within 90 days · click for overview →</div></div>
       <div class="metric-card mc-amber" style="cursor:pointer" onclick="showDashPopup('reviews')"><div class="metric-label">Pending Reviews</div><div class="metric-val cv-amber">${pending}</div><div class="metric-sub">Need approval · click for overview →</div></div>
-      <div class="metric-card mc-blue" style="cursor:pointer" onclick="navigate('timesheets')"><div class="metric-label">Pending Timesheets</div><div class="metric-val cv-blue">${pendingTimesheets}</div><div class="metric-sub">Awaiting approval →</div></div>
-      <div class="metric-card mc-green" style="cursor:pointer" onclick="navigate('leaves')"><div class="metric-label">Leave Requests</div><div class="metric-val">${pendingLeaves}</div><div class="metric-sub">Pending approval →</div></div>
+      <div class="metric-card mc-blue" style="cursor:pointer" onclick="showDashPopup('timesheets')"><div class="metric-label">Pending Timesheets</div><div class="metric-val cv-blue">${pendingTimesheets}</div><div class="metric-sub">Awaiting approval · click for overview →</div></div>
+      <div class="metric-card mc-green" style="cursor:pointer" onclick="showDashPopup('leaves')"><div class="metric-label">Leave Requests</div><div class="metric-val">${pendingLeaves}</div><div class="metric-sub">Pending approval · click for overview →</div></div>
     </div>
     ${visaExp>0?`<div class="alert alert-red" style="cursor:pointer" onclick="showDashPopup('visas')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>${visaExp} visa(s) expiring within 90 days — Click for overview</div>`:''}
     ${projEnd>0?`<div class="alert alert-amber" style="cursor:pointer" onclick="showDashPopup('projects')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>${projEnd} project(s) ending within 60 days — Click for overview</div>`:''}
