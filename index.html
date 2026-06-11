@@ -1235,12 +1235,11 @@ window.loadEmpDocuments = async function(){
     <div style="display:flex;align-items:center;gap:10px">
       <span style="font-size:1.4rem">${icon(d.file_type)}</span>
       <div>
-        <div style="font-weight:500;font-size:0.84rem">${d.file_name}</div>
+        <a href="${d.file_url}" target="_blank" style="font-weight:500;font-size:0.84rem;color:var(--accent);text-decoration:none">${d.file_name}</a>
         <div style="font-size:0.73rem;color:var(--ink-3);margin-top:2px">${d.category}${d.description?' · '+d.description:''} · ${size(d.file_size||0)}</div>
       </div>
     </div>
     <div style="display:flex;gap:6px">
-      <a href="${d.file_url}" target="_blank" class="btn btn-ghost btn-sm">View</a>
       <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="window.deleteDocument('${d.id}','${d.file_url}')">Delete</button>
     </div>
   </div>`).join('');
@@ -1271,11 +1270,10 @@ window.loadEmployeeDocsForAdmin = async function(empId, employeeRecordId){
     <div style="display:flex;align-items:center;gap:7px">
       <span>${icon(d.file_type)}</span>
       <div>
-        <div style="font-size:0.79rem;font-weight:500">${d.file_name}</div>
+        <a href="${d.file_url}" target="_blank" style="font-size:0.79rem;font-weight:500;color:var(--accent);text-decoration:none">${d.file_name}</a>
         <div style="font-size:0.69rem;color:var(--ink-3)">${d.category}${d.description?' · '+d.description:''} · ${size(d.file_size||0)}</div>
       </div>
     </div>
-    <a href="${d.file_url}" target="_blank" class="btn btn-ghost btn-sm">View</a>
   </div>`).join('');
 };
 
