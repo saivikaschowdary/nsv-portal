@@ -352,6 +352,14 @@ function goToPortal(type){
 async function init(){
   if(!sb){ showScreen('screen-auth'); return; }
 
+  // Auto logout on page refresh — check if this is a refresh
+  const navEntries = performance.getEntriesByType('navigation');
+  const isRefresh = navEntries.length > 0 && navEntries[0].type === 'reload';
+  if(isRefresh){
+    await sb.auth.signOut();
+    showScreen('screen-auth');
+  }
+
   // Show company name on login page from URL ?company= parameter
   const params = new URLSearchParams(window.location.search);
   const slug = params.get('company');
@@ -387,6 +395,12 @@ async function init(){
 
 async function loadUserContext(user){
   currentUser = user;
+  // Auto logout after 24 hours
+  if(window._autoLogoutTimer) clearTimeout(window._autoLogoutTimer);
+  window._autoLogoutTimer = setTimeout(async()=>{
+    showToast('Session expired. Please sign in again.');
+    await doSignOut();
+  }, 24 * 60 * 60 * 1000);
   const { data:profile } = await sb.from('profiles').select('*,tenants(*)').eq('id', user.id).maybeSingle();
 
   // Platform admin — special view
