@@ -1255,6 +1255,30 @@ window.deleteDocument = async function(id, fileUrl){
   await window.loadEmpDocuments();
 };
 
+
+window.loadEmployeeDocsForAdmin = async function(empId, employeeRecordId){
+  const el = document.getElementById('modal-doc-list-'+empId);
+  if(!el) return;
+  const {data:docs}=await sb.from('documents').select('*').eq('employee_id',employeeRecordId).order('created_at',{ascending:false});
+  const list=docs||[];
+  if(list.length===0){
+    el.innerHTML='<div style="font-size:0.78rem;color:var(--ink-3)">No documents uploaded.</div>';
+    return;
+  }
+  const icon=type=>type?.includes('pdf')?'📄':type?.includes('image')?'🖼️':'📎';
+  const size=bytes=>bytes<1024?bytes+'B':bytes<1048576?(bytes/1024).toFixed(1)+'KB':(bytes/1048576).toFixed(1)+'MB';
+  el.innerHTML=list.map(d=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+    <div style="display:flex;align-items:center;gap:7px">
+      <span>${icon(d.file_type)}</span>
+      <div>
+        <div style="font-size:0.79rem;font-weight:500">${d.file_name}</div>
+        <div style="font-size:0.69rem;color:var(--ink-3)">${d.category}${d.description?' · '+d.description:''} · ${size(d.file_size||0)}</div>
+      </div>
+    </div>
+    <a href="${d.file_url}" target="_blank" class="btn btn-ghost btn-sm">View</a>
+  </div>`).join('');
+};
+
 async function platformNav(page){
   document.querySelectorAll('[id^="pnav-"]').forEach(e=>e.classList.remove('active'));
   document.getElementById('pnav-'+page)?.classList.add('active');
@@ -1640,16 +1664,22 @@ async function viewEmployee(empId){
         ${e.project_end?`<span style="background:var(--amber-light);color:var(--amber);padding:2px 7px;border-radius:20px;font-size:0.7rem">End: ${e.project_end}</span>`:''}
       </div>
     </div>
-    ${e.visa_type?`<div style="background:${(e.days_until_visa_expiry||999)<90?'var(--red-light)':'var(--surface-2)'};border-radius:9px;padding:11px">
+    ${e.visa_type?`<div style="background:${(e.days_until_visa_expiry||999)<90?'var(--red-light)':'var(--surface-2)'};border-radius:9px;padding:11px;margin-bottom:9px">
       <div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px">Visa</div>
       <div style="display:flex;justify-content:space-between;align-items:center"><span class="badge badge-gray">${e.visa_type}</span><span style="font-weight:700;color:${(e.days_until_visa_expiry||999)<90?'var(--red)':'var(--ink)'}">${e.visa_expiry_date||'—'}${e.days_until_visa_expiry!==null?` (${e.days_until_visa_expiry}d)`:''}</span></div>
     </div>`:''}
+    <div style="background:var(--surface-2);border-radius:9px;padding:11px">
+      <div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px">Documents</div>
+      <div id="modal-doc-list-${empId}"><div style="font-size:0.78rem;color:var(--ink-3)">Loading...</div></div>
+    </div>
   </div>
   <div class="modal-footer">
     ${isAdmin()?`<button class="btn btn-ghost btn-sm" style="color:var(--red);margin-right:auto" onclick="deleteEmployee('${e.user_id}')">Delete</button>`:''}
     <button class="btn btn-ghost" onclick="closeModal()">Close</button>
     ${isAdmin()?`<button class="btn btn-primary" onclick="editEmployee('${empId}')">Edit</button>`:''}
   </div>`);
+  // Load documents for this employee
+  window.loadEmployeeDocsForAdmin('${empId}', '${e.employee_id}');
 }
 
 // ── Edit Employee ──────────────────────────────────────────
