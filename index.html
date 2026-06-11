@@ -115,7 +115,7 @@ tr:hover td{background:var(--surface)}
 .alert-amber{background:var(--amber-light);border:1px solid rgba(184,114,42,0.2);color:var(--amber)}
 .realtime-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;display:inline-block;margin-right:4px;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-@media(max-width:860px){.sidebar{display:none}.metric-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:860px){.sidebar{display:none}.metric-grid{grid-template-columns:1fr 1fr 1fr}}
 </style>
 </head>
 <body>
@@ -1504,15 +1504,19 @@ const isAdmin=()=>currentProfile?.role==='admin';
 
 // ── Dashboard ──────────────────────────────────────────────
 async function rDash(){
-  const [er,rr,vr,pr]=await Promise.all([
+  const [er,rr,vr,pr,tr,lr]=await Promise.all([
     sb.from('employees').select('id,status').eq('tenant_id',tid()),
     sb.from('reviews').select('id').eq('tenant_id',tid()).eq('status','Submitted'),
     sb.from('visa_details').select('visa_expiry_date').eq('tenant_id',tid()),
-    sb.from('employees').select('id,project_end').eq('tenant_id',tid()).not('project_end','is',null)
+    sb.from('employees').select('id,project_end').eq('tenant_id',tid()).not('project_end','is',null),
+    sb.from('timesheets').select('id').eq('tenant_id',tid()).eq('status','Submitted'),
+    sb.from('leave_requests').select('id').eq('tenant_id',tid()).eq('status','Pending')
   ]);
   const emps=er.data||[], today=new Date();
   const total=emps.length, bench=emps.filter(e=>e.status==='Bench').length, active=emps.filter(e=>e.status==='Active').length;
   const pending=(rr.data||[]).length;
+  const pendingTimesheets=(tr.data||[]).length;
+  const pendingLeaves=(lr.data||[]).length;
   const visaExp=(vr.data||[]).filter(v=>{const d=Math.ceil((new Date(v.visa_expiry_date)-today)/86400000);return d>=0&&d<90;}).length;
   const projEnd=(pr.data||[]).filter(p=>{const d=Math.ceil((new Date(p.project_end)-today)/86400000);return d>=0&&d<=60;}).length;
   // Get department breakdown for chart
@@ -1532,6 +1536,8 @@ async function rDash(){
       <div class="metric-card mc-blue" style="cursor:pointer" onclick="showDashPopup('bench')"><div class="metric-label">On Bench</div><div class="metric-val cv-blue">${bench}</div><div class="metric-sub">${active} active · click for overview →</div></div>
       <div class="metric-card mc-red" style="cursor:pointer" onclick="showDashPopup('visas')"><div class="metric-label">Visa Expiring</div><div class="metric-val cv-red">${visaExp}</div><div class="metric-sub">Within 90 days · click for overview →</div></div>
       <div class="metric-card mc-amber" style="cursor:pointer" onclick="showDashPopup('reviews')"><div class="metric-label">Pending Reviews</div><div class="metric-val cv-amber">${pending}</div><div class="metric-sub">Need approval · click for overview →</div></div>
+      <div class="metric-card mc-blue" style="cursor:pointer" onclick="navigate('timesheets')"><div class="metric-label">Pending Timesheets</div><div class="metric-val cv-blue">${pendingTimesheets}</div><div class="metric-sub">Awaiting approval →</div></div>
+      <div class="metric-card mc-green" style="cursor:pointer" onclick="navigate('leaves')"><div class="metric-label">Leave Requests</div><div class="metric-val">${pendingLeaves}</div><div class="metric-sub">Pending approval →</div></div>
     </div>
     ${visaExp>0?`<div class="alert alert-red" style="cursor:pointer" onclick="showDashPopup('visas')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>${visaExp} visa(s) expiring within 90 days — Click for overview</div>`:''}
     ${projEnd>0?`<div class="alert alert-amber" style="cursor:pointer" onclick="showDashPopup('projects')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>${projEnd} project(s) ending within 60 days — Click for overview</div>`:''}
@@ -1578,6 +1584,8 @@ async function rDash(){
         <button class="btn btn-ghost btn-sm" onclick="navigate('visas')">🛂 Visa Tracker</button>
         <button class="btn btn-ghost btn-sm" onclick="navigate('projects')">📁 Project Tracker</button>
         <button class="btn btn-ghost btn-sm" onclick="navigate('reviews')">📋 Evaluations</button>
+        <button class="btn btn-ghost btn-sm" onclick="navigate('timesheets')">⏱️ Timesheets</button>
+        <button class="btn btn-ghost btn-sm" onclick="navigate('leaves')">🏖️ Leave Requests</button>
         ${isAdmin()?`<button class="btn btn-ghost btn-sm" onclick="navigate('users')">⚙️ Manage Users</button>`:''}
       </div>
     </div>
