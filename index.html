@@ -1677,7 +1677,7 @@ async function viewEmployee(empId){
     ${isAdmin()?`<button class="btn btn-primary" onclick="editEmployee('${empId}')">Edit</button>`:''}
   </div>`);
   // Load documents for this employee after modal renders
-  setTimeout(()=>window.loadEmployeeDocsForAdmin('admin-modal-doc-list', '${e.employee_id}'), 100);
+  setTimeout(()=>window.loadEmployeeDocsForAdmin('admin-modal-doc-list', `${e.employee_id}`), 100);
 }
 
 // ── Edit Employee ──────────────────────────────────────────
