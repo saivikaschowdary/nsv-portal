@@ -1627,12 +1627,12 @@ async function rEmployees(){
     </div>
   <div class="card table-wrap"><table id="emp-table">
     <thead><tr><th>Name</th><th>Title</th><th>Department</th><th>Manager</th><th>Status</th><th>Visa</th><th></th></tr></thead>
-    <tbody>${list.length?list.map((e,i)=>`<tr data-name="${(e.full_name||'').toLowerCase()}" data-email="${(e.email||'').toLowerCase()}" data-title="${(e.job_title||'').toLowerCase()}" data-dept="${e.department_name||''}" data-status="${e.status||'Active'}">
+    <tbody>${list.length?list.map((e,i)=>`<tr data-name="${(e.full_name||'').toLowerCase()}" data-email="${(e.email||'').toLowerCase()}" data-title="${(e.job_title||'').toLowerCase()}" data-dept="${e.department_name||''}" data-status="${e.status||'Active'}" style="cursor:pointer" onclick="viewEmployee('${e.employee_id}')" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
       <td><div class="emp-cell">${mkAv(e.full_name,i)}<div><span class="emp-cell-name">${e.full_name}</span><span class="emp-cell-sub">${e.email}</span></div></div></td>
       <td>${e.job_title||'—'}</td><td>${e.department_name||'—'}</td><td>${e.manager_name||'—'}</td>
       <td>${sBadge(e.status||'Active')}</td>
       <td>${e.visa_type?`<span class="badge badge-gray">${e.visa_type}</span>`:'—'}</td>
-      <td><button class="btn btn-ghost btn-sm" onclick="viewEmployee('${e.employee_id}')">View →</button></td>
+      <td></td>
     </tr>`).join(''):'<tr><td colspan="7" style="text-align:center;padding:36px;color:var(--ink-3)">No employees yet.</td></tr>'}</tbody>
   </table></div></div>`;
 }
