@@ -1510,6 +1510,11 @@ function loadHRDashboard(){
     const el=document.getElementById(id);
     if(el) el.style.display=isAdm?'':'none';
   });
+  // Team Overview - hidden for managers
+  ['nav-team','side-team'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display=p?.role==='manager'?'none':'';
+  });
   navigate('dashboard');
   setupRealtime();
 }
@@ -1635,21 +1640,19 @@ async function rDash(){
 
 // ── Team Overview ──────────────────────────────────────────
 async function rTeam(){
-  const { data } = await sb.from('v_employee_profile').select('*').eq('tenant_id',tid()).order('full_name');
+  const { data } = await sb.from('profiles').select('id,full_name,email,role,is_active').eq('tenant_id',tid()).eq('role','manager').order('full_name');
   const list=data||[];
-  return`<div class="page-header"><div><h2>Team Overview</h2><p>${list.length} members</p></div><button class="btn btn-primary btn-sm" onclick="openAddEmployee()">+ Add Employee</button></div>
+  return`<div class="page-header"><div><h2>Team Overview</h2><p>${list.length} manager${list.length!==1?'s':''}</p></div></div>
   <div class="page-body"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(265px,1fr));gap:12px">
-    ${list.map((e,i)=>`<div class="card card-padded" style="cursor:pointer;transition:all 0.15s" onclick="viewEmployee('${e.employee_id}')" onmouseover="this.style.boxShadow='0 4px 18px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
+    ${list.map((e,i)=>`<div class="card card-padded" style="transition:all 0.15s" onmouseover="this.style.boxShadow='0 4px 18px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-        <div style="display:flex;align-items:center;gap:8px">${mkAv(e.full_name,i,36)}<div><div style="font-weight:500;font-size:0.86rem">${e.full_name}</div><div style="font-size:0.72rem;color:var(--ink-3)">${e.job_title||''}${e.department_name?' · '+e.department_name:''}</div></div></div>
-        ${sBadge(e.status||'Active')}
+        <div style="display:flex;align-items:center;gap:8px">${mkAv(e.full_name,i,36)}<div><div style="font-weight:500;font-size:0.86rem">${e.full_name}</div><div style="font-size:0.72rem;color:var(--ink-3)">${e.email}</div></div></div>
+        <span class="badge badge-blue">Manager</span>
       </div>
       <div style="font-size:0.75rem;color:var(--ink-3);border-top:1px solid var(--border);padding-top:8px">
-        ${e.visa_type?`<div style="margin-bottom:3px"><span class="badge badge-${(e.days_until_visa_expiry||999)<90?'red':'gray'}">${e.visa_type}</span>${(e.days_until_visa_expiry||999)<90?` <span style="color:var(--red);font-size:0.69rem">${e.days_until_visa_expiry}d left</span>`:''}</div>`:''}
-        <div>${e.current_project||'On Bench'}</div>
-        ${e.manager_name?`<div style="margin-top:2px">Mgr: <strong>${e.manager_name}</strong></div>`:''}
+        <div>${e.is_active?'<span class="badge badge-green">Active</span>':'<span class="badge badge-gray">Inactive</span>'}</div>
       </div>
-    </div>`).join('')||'<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--ink-3)">No employees yet.</div>'}
+    </div>`).join('')||'<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--ink-3)">No managers yet.</div>'}
   </div></div>`;
 }
 
