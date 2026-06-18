@@ -543,6 +543,7 @@ async function doSaveProfile(){
   await sb.from('profiles').update({profile_complete:true}).eq('id', currentUser.id);
   currentProfile.profile_complete=true;
   if(currentProfile.role==='employee'){ await renderEmployeeDashboard(); showScreen('screen-employee'); }
+  else if(currentProfile.role==='manager'){ loadHRDashboard(); }
   else loadHRDashboard();
 }
 
@@ -1532,6 +1533,8 @@ const mkAv=(n,i,sz=30)=>{const ini=(n||'?').split(' ').map(w=>w[0]).join('').sli
 const sBadge=s=>s==='Active'?`<span class="status-active">Active</span>`:s==='Bench'?`<span class="status-bench">Bench</span>`:`<span class="status-inactive">${s||'—'}</span>`;
 const tid=()=>currentTenant?.id;
 const isAdmin=()=>currentProfile?.role==='admin';
+const isHR=()=>currentProfile?.role==='hr';
+const isAdminOrHR=()=>currentProfile?.role==='admin'||currentProfile?.role==='hr';
 
 // ── Dashboard ──────────────────────────────────────────────
 async function rDash(){
@@ -1682,7 +1685,7 @@ async function viewEmployee(empId){
   if(!e) return;
   showModal(`
   <div class="modal-header"><div style="display:flex;align-items:center;gap:9px">${mkAv(e.full_name,0,34)}<div><h3>${e.full_name}</h3><div style="font-size:0.74rem;color:var(--ink-3)">${e.job_title||''} · ${e.department_name||''}</div></div></div>
-  <div style="display:flex;gap:6px">${isAdmin()?`<button class="btn btn-primary btn-sm" onclick="editEmployee('${empId}')">Edit</button>`:''}
+  <div style="display:flex;gap:6px">${isAdminOrHR()?`<button class="btn btn-primary btn-sm" onclick="editEmployee('${empId}')">Edit</button>`:''}
   <button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div></div>
   <div class="modal-body">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;font-size:0.81rem;margin-bottom:12px">
@@ -1711,9 +1714,9 @@ async function viewEmployee(empId){
     </div>
   </div>
   <div class="modal-footer">
-    ${isAdmin()?`<button class="btn btn-ghost btn-sm" style="color:var(--red);margin-right:auto" onclick="deleteEmployee('${e.user_id}')">Delete</button>`:''}
+    ${isAdminOrHR()?`<button class="btn btn-ghost btn-sm" style="color:var(--red);margin-right:auto" onclick="deleteEmployee('${e.user_id}')">Delete</button>`:''}
     <button class="btn btn-ghost" onclick="closeModal()">Close</button>
-    ${isAdmin()?`<button class="btn btn-primary" onclick="editEmployee('${empId}')">Edit</button>`:''}
+    ${isAdminOrHR()?`<button class="btn btn-primary" onclick="editEmployee('${empId}')">Edit</button>`:''}
   </div>`);
   // Load documents for this employee after modal renders
   setTimeout(()=>window.loadEmployeeDocsForAdmin('admin-modal-doc-list', `${e.employee_id}`), 100);
@@ -1926,10 +1929,10 @@ async function rUsers(){
   const {data:profiles}=await sb.from('profiles').select('*').eq('tenant_id',tid()).order('role').order('full_name');
   const users=profiles||[];
   const admins=users.filter(u=>u.role==='admin'),managers=users.filter(u=>u.role==='manager'),employees=users.filter(u=>u.role==='employee');
-  const rRow=u=>`<tr><td><strong>${u.full_name}</strong></td><td style="color:var(--ink-3)">${u.email}</td><td><span class="badge badge-${u.role==='admin'?'ink':u.role==='manager'?'blue':'green'}">${u.role}</span></td><td>${u.is_active?'<span class="badge badge-green">Active</span>':'<span class="badge badge-gray">Inactive</span>'}</td><td style="display:flex;gap:6px">${isAdmin()?`<button class="btn btn-ghost btn-sm" onclick="editUser('${u.id}')">Edit</button>`:''} ${isAdmin()&&(u.role!=='admin'||u.id!==currentProfile?.id)?`<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteUserAccount('${u.id}')">Delete</button>`:''}</td></tr>`;
+  const rRow=u=>`<tr><td><strong>${u.full_name}</strong></td><td style="color:var(--ink-3)">${u.email}</td><td><span class="badge badge-${u.role==='admin'?'ink':u.role==='hr'?'amber':u.role==='manager'?'blue':'green'}">${u.role}</span></td><td>${u.is_active?'<span class="badge badge-green">Active</span>':'<span class="badge badge-gray">Inactive</span>'}</td><td style="display:flex;gap:6px">${isAdmin()?`<button class="btn btn-ghost btn-sm" onclick="editUser('${u.id}')">Edit</button>`:''} ${isAdmin()&&(u.role!=='admin'||u.id!==currentProfile?.id)?`<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteUserAccount('${u.id}')">Delete</button>`:''}</td></tr>`;
   return`<div class="page-header"><div><h2>User Management</h2></div><button class="btn btn-primary btn-sm" onclick="openAddEmployee()">+ Add Employee</button></div>
   <div class="page-body">
-    ${isAdmin()?`<div class="card" style="margin-bottom:14px"><div style="padding:11px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center"><strong>Admins / HR (${admins.length})</strong><button class="btn btn-primary btn-sm" onclick="openAddUser('admin')">+ Add Admin</button></div><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>${admins.map(rRow).join('')||'<tr><td colspan="5" style="padding:14px;color:var(--ink-3);text-align:center">None.</td></tr>'}</tbody></table></div>
+    ${isAdmin()?`<div class="card" style="margin-bottom:14px"><div style="padding:11px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center"><strong>Admins / HR (${admins.length})</strong><div style="display:flex;gap:6px"><button class="btn btn-ghost btn-sm" onclick="openAddUser('hr')">+ Add HR</button><button class="btn btn-primary btn-sm" onclick="openAddUser('admin')">+ Add Admin</button></div></div><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>${admins.map(rRow).join('')||'<tr><td colspan="5" style="padding:14px;color:var(--ink-3);text-align:center">None.</td></tr>'}</tbody></table></div>
     <div class="card" style="margin-bottom:14px"><div style="padding:11px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center"><strong>Managers (${managers.length})</strong><button class="btn btn-primary btn-sm" onclick="openAddUser('manager')">+ Add Manager</button></div><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>${managers.map(rRow).join('')||'<tr><td colspan="5" style="padding:14px;color:var(--ink-3);text-align:center">None.</td></tr>'}</tbody></table></div>`:''}
     <div class="card"><div style="padding:11px 14px;border-bottom:1px solid var(--border)"><strong>Employees (${employees.length})</strong></div><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody>${employees.map(rRow).join('')||'<tr><td colspan="5" style="padding:32px;color:var(--ink-3);text-align:center">No employees yet.</td></tr>'}</tbody></table></div>
   </div>`;
