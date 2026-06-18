@@ -352,13 +352,12 @@ function goToPortal(type){
 async function init(){
   if(!sb){ showScreen('screen-auth'); return; }
 
-  // Auto logout on page refresh — check if this is a refresh
-  const navEntries = performance.getEntriesByType('navigation');
-  const isRefresh = navEntries.length > 0 && navEntries[0].type === 'reload';
-  if(isRefresh){
+  // Auto logout on every page load (refresh or re-navigation)
+  if(!window._appInitialized){
     await sb.auth.signOut();
     showScreen('screen-auth');
   }
+  window._appInitialized = true;
 
   // Show company name on login page from URL ?company= parameter
   const params = new URLSearchParams(window.location.search);
