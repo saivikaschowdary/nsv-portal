@@ -1735,7 +1735,9 @@ async function editEmployee(empId){
     sb.from('departments').select('*').eq('tenant_id',tid()).order('name'),
     sb.from('profiles').select('id,full_name').eq('tenant_id',tid()).eq('role','manager')
   ]);
-  const e=er.data, depts=dr.data||[], mgrs=mr.data||[];
+  const e=er.data, depts=dr.data||[];
+  // HR can only see managers, not admins
+  const mgrs=(mr.data||[]);
   if(!e) return;
   showModal(`
   <div class="modal-header"><h3>Edit — ${e.full_name}</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
@@ -1823,7 +1825,9 @@ async function deleteEmployee(userId){
 // ── Add Employee ───────────────────────────────────────────
 async function openAddEmployee(){
   const [dr,mr]=await Promise.all([sb.from('departments').select('*').eq('tenant_id',tid()).order('name'),sb.from('profiles').select('id,full_name').eq('tenant_id',tid()).eq('role','manager')]);
-  const depts=dr.data||[],mgrs=mr.data||[];
+  const depts=dr.data||[];
+  // Only show managers in manager dropdown
+  const mgrs=mr.data||[];
   showModal(`
   <div class="modal-header"><h3>Add Employee</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
   <div class="modal-body">
@@ -1934,7 +1938,10 @@ async function approveReview(id){
 async function rUsers(){
   const {data:profiles}=await sb.from('profiles').select('*').eq('tenant_id',tid()).order('role').order('full_name');
   const users=profiles||[];
-  const admins=users.filter(u=>u.role==='admin'),managers=users.filter(u=>u.role==='manager'),employees=users.filter(u=>u.role==='employee');
+  const admins=users.filter(u=>u.role==='admin'||u.role==='hr'),managers=users.filter(u=>u.role==='manager'),employees=users.filter(u=>u.role==='employee');
+  // HR only sees managers and employees, not admins
+  const visibleManagers=isHR()?managers:managers;
+  const visibleAdmins=isAdmin()?admins:[];
   const rRow=u=>`<tr><td><strong>${u.full_name}</strong></td><td style="color:var(--ink-3)">${u.email}</td><td><span class="badge badge-${u.role==='admin'?'ink':u.role==='hr'?'amber':u.role==='manager'?'blue':'green'}">${u.role}</span></td><td>${u.is_active?'<span class="badge badge-green">Active</span>':'<span class="badge badge-gray">Inactive</span>'}</td><td style="display:flex;gap:6px">${isAdmin()?`<button class="btn btn-ghost btn-sm" onclick="editUser('${u.id}')">Edit</button>`:''} ${(isAdmin()&&(u.role!=='admin'||u.id!==currentProfile?.id))||(isHR()&&u.role==='manager')?`<button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="deleteUserAccount('${u.id}')">Delete</button>`:''}</td></tr>`;
   return`<div class="page-header"><div><h2>User Management</h2></div><button class="btn btn-primary btn-sm" onclick="openAddEmployee()">+ Add Employee</button></div>
   <div class="page-body">
