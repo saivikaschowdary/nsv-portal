@@ -453,12 +453,12 @@ async function doLogin(){
   if(error){ err.textContent=error.message; err.classList.add('show'); return; }
   if(data?.user){
     const {data:profile}=await sb.from('profiles').select('role').eq('id',data.user.id).maybeSingle();
-    if(profile?.role==='employee'){
+    if(profile?.role==='employee'||profile?.role==='manager'){
       window._roleRejecting=true;
       currentUser=null;
       await sb.auth.signOut();
       window._roleRejecting=false;
-      err.textContent='Invalid credentials. Please use the Employee Portal.';
+      err.textContent=profile?.role==='employee'?'Invalid credentials. Please use the Employee Portal.':'Invalid credentials. Please use the Manager Portal.';
       err.classList.add('show');
       return;
     }
@@ -484,7 +484,7 @@ async function doManagerLogin(){
       currentUser=null;
       await sb.auth.signOut();
       window._roleRejecting=false;
-      err.textContent='Invalid credentials. Please use the Employee Portal.';
+      err.textContent=profile?.role==='employee'?'Invalid credentials. Please use the Employee Portal.':'Invalid credentials. Please use the Manager Portal.';
       err.classList.add('show');
       return;
     }
@@ -1939,7 +1939,7 @@ async function rUsers(){
 }
 
 function openAddUser(role){
-  showModal(`<div class="modal-header"><h3>Add ${role==='admin'?'Admin/HR':'Manager'}</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
+  showModal(`<div class="modal-header"><h3>Add ${role==='admin'?'Admin':role==='hr'?'HR Staff':'Manager'}</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
   <div class="modal-body">
     <div style="background:var(--accent-light);border-radius:8px;padding:10px 12px;font-size:0.79rem;color:var(--accent);margin-bottom:13px">✉️ A welcome email with the portal link will be prepared automatically.</div>
     <div class="form-grid"><div class="form-group full"><label>Full Name *</label><input id="au-name"></div><div class="form-group full"><label>Work Email *</label><input id="au-email" type="email"></div></div>
