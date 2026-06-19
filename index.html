@@ -916,6 +916,7 @@ window.viewTimesheet = async function(id){
 window.approveTimesheet = async function(id){
   const comment=document.getElementById('ts-comment')?.value||'';
   await sb.from('timesheets').update({status:'Approved',manager_comment:comment,reviewed_by:currentUser.id}).eq('id',id);
+  await logAudit('APPROVE timesheet', 'timesheets', id);
   closeModal();showToast('✓ Timesheet approved.');navigate('timesheets');
 };
 
@@ -923,6 +924,7 @@ window.rejectTimesheet = async function(id){
   const comment=document.getElementById('ts-comment')?.value||'';
   if(!comment){showToast('Please add a comment explaining the rejection.');return;}
   await sb.from('timesheets').update({status:'Rejected',manager_comment:comment,reviewed_by:currentUser.id}).eq('id',id);
+  await logAudit('REJECT timesheet', 'timesheets', id);
   closeModal();showToast('Timesheet rejected.');navigate('timesheets');
 };
 
@@ -1166,6 +1168,7 @@ window.viewLeave = async function(id){
 window.approveLeave = async function(id){
   const comment=document.getElementById('leave-comment')?.value||'';
   await sb.from('leave_requests').update({status:'Approved',manager_comment:comment,reviewed_by:currentUser.id}).eq('id',id);
+  await logAudit('APPROVE leave request', 'leave_requests', id);
   closeModal();showToast('✓ Leave approved.');navigate('leaves');
 };
 
@@ -1173,6 +1176,7 @@ window.rejectLeave = async function(id){
   const comment=document.getElementById('leave-comment')?.value||'';
   if(!comment){showToast('Please add a comment explaining the rejection.');return;}
   await sb.from('leave_requests').update({status:'Rejected',manager_comment:comment,reviewed_by:currentUser.id}).eq('id',id);
+  await logAudit('REJECT leave request', 'leave_requests', id);
   closeModal();showToast('Leave rejected.');navigate('leaves');
 };
 
@@ -2039,6 +2043,7 @@ async function viewReview(id){
 async function approveReview(id){
   const comment=document.getElementById('review-comment').value;
   await sb.from('reviews').update({status:'Approved',manager_comment:comment,reviewed_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',id);
+  await logAudit('APPROVE review', 'reviews', id);
   closeModal();showToast('✓ Review approved.');navigate('reviews');
 }
 
