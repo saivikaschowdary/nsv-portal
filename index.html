@@ -915,16 +915,20 @@ window.viewTimesheet = async function(id){
 
 window.approveTimesheet = async function(id){
   const comment=document.getElementById('ts-comment')?.value||'';
+  const {data:tsData}=await sb.from('timesheets').select('employee_id,employees(profile_id)').eq('id',id).single();
   await sb.from('timesheets').update({status:'Approved',manager_comment:comment,reviewed_by:currentUser.id}).eq('id',id);
   await logAudit('APPROVE timesheet', 'timesheets', id);
+  if(tsData?.employees?.profile_id) await sendNotification(tsData.employees.profile_id,'Timesheet Approved','Your timesheet has been approved'+(comment?' with comment: '+comment:'.'),'approval','timesheets');
   closeModal();showToast('✓ Timesheet approved.');navigate('timesheets');
 };
 
 window.rejectTimesheet = async function(id){
   const comment=document.getElementById('ts-comment')?.value||'';
   if(!comment){showToast('Please add a comment explaining the rejection.');return;}
+  const {data:tsDataR}=await sb.from('timesheets').select('employee_id,employees(profile_id)').eq('id',id).single();
   await sb.from('timesheets').update({status:'Rejected',manager_comment:comment,reviewed_by:currentUser.id}).eq('id',id);
   await logAudit('REJECT timesheet', 'timesheets', id);
+  if(tsDataR?.employees?.profile_id) await sendNotification(tsDataR.employees.profile_id,'Timesheet Rejected','Your timesheet was rejected. Reason: '+comment,'rejection','timesheets');
   closeModal();showToast('Timesheet rejected.');navigate('timesheets');
 };
 
@@ -996,6 +1000,11 @@ window.submitTimesheet = async function(empId){
     status:'Submitted'
   });
   if(error){errEl.textContent=error.message;errEl.style.display='block';return;}
+  // Notify managers about new timesheet
+  const {data:mgrProfiles}=await sb.from('profiles').select('id').eq('tenant_id',currentTenant.id).eq('role','manager');
+  const {data:adminProfiles}=await sb.from('profiles').select('id').eq('tenant_id',currentTenant.id).eq('role','admin');
+  const toNotify=[...(mgrProfiles||[]),...(adminProfiles||[])];
+  for(const m of toNotify){ await sendNotification(m.id,'New Timesheet Submitted',currentProfile.full_name+' submitted a timesheet for approval.','submission','timesheets'); }
   closeModal();
   showToast('✓ Timesheet submitted successfully!');
   await renderEmployeeDashboard();
@@ -1167,16 +1176,20 @@ window.viewLeave = async function(id){
 
 window.approveLeave = async function(id){
   const comment=document.getElementById('leave-comment')?.value||'';
+  const {data:lrData}=await sb.from('leave_requests').select('employee_id,employees(profile_id)').eq('id',id).single();
   await sb.from('leave_requests').update({status:'Approved',manager_comment:comment,reviewed_by:currentUser.id}).eq('id',id);
   await logAudit('APPROVE leave request', 'leave_requests', id);
+  if(lrData?.employees?.profile_id) await sendNotification(lrData.employees.profile_id,'Leave Approved','Your leave request has been approved.'+(comment?' Note: '+comment:''),'approval','leaves');
   closeModal();showToast('✓ Leave approved.');navigate('leaves');
 };
 
 window.rejectLeave = async function(id){
   const comment=document.getElementById('leave-comment')?.value||'';
   if(!comment){showToast('Please add a comment explaining the rejection.');return;}
+  const {data:lrDataR}=await sb.from('leave_requests').select('employee_id,employees(profile_id)').eq('id',id).single();
   await sb.from('leave_requests').update({status:'Rejected',manager_comment:comment,reviewed_by:currentUser.id}).eq('id',id);
   await logAudit('REJECT leave request', 'leave_requests', id);
+  if(lrDataR?.employees?.profile_id) await sendNotification(lrDataR.employees.profile_id,'Leave Request Rejected','Your leave request was rejected. Reason: '+comment,'rejection','leaves');
   closeModal();showToast('Leave rejected.');navigate('leaves');
 };
 
@@ -1231,6 +1244,11 @@ window.submitLeave = async function(empId){
     status:'Pending'
   });
   if(error){errEl.textContent=error.message;errEl.style.display='block';return;}
+  // Notify managers about new leave request
+  const {data:mgrProfs}=await sb.from('profiles').select('id').eq('tenant_id',currentTenant.id).eq('role','manager');
+  const {data:adminProfs}=await sb.from('profiles').select('id').eq('tenant_id',currentTenant.id).eq('role','admin');
+  const toNotifyL=[...(mgrProfs||[]),...(adminProfs||[])];
+  for(const m of toNotifyL){ await sendNotification(m.id,'New Leave Request',currentProfile.full_name+' submitted a leave request for approval.','submission','leaves'); }
   closeModal();showToast('✓ Leave request submitted!');
   await window.loadEmpLeaves();
 };
@@ -1416,6 +1434,85 @@ async function rAuditLog(){
     </table></div>`}
   </div>`;
 }
+
+
+// ════════════════════════════════════════════════════════════
+// NOTIFICATIONS
+// ════════════════════════════════════════════════════════════
+async function sendNotification(userId, title, message, type, link=null){
+  if(!userId||!currentTenant) return;
+  try {
+    await sb.from('notifications').insert({
+      tenant_id: currentTenant.id,
+      user_id: userId,
+      title, message, type, link,
+      is_read: false
+    });
+  } catch(e){}
+}
+
+async function loadNotifications(){
+  const {data:notifs}=await sb.from('notifications').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(20);
+  const list=notifs||[];
+  const unread=list.filter(n=>!n.is_read).length;
+
+  // Update badge
+  const badge=document.getElementById('notif-count');
+  if(badge){
+    badge.textContent=unread>9?'9+':unread;
+    badge.style.display=unread>0?'flex':'none';
+  }
+
+  // Update list
+  const el=document.getElementById('notif-list');
+  if(!el) return;
+  if(list.length===0){
+    el.innerHTML='<div style="padding:24px;text-align:center;color:var(--ink-3);font-size:0.81rem">No notifications yet.</div>';
+    return;
+  }
+
+  const typeIcon=t=>t==='approval'?'✅':t==='rejection'?'❌':t==='submission'?'📋':t==='announcement'?'📢':t==='warning'?'⚠️':'🔔';
+  el.innerHTML=list.map(n=>`<div onclick="window.clickNotification('${n.id}','${n.link||''}')" style="padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;background:${n.is_read?'#fff':'var(--accent-light)'};transition:background 0.15s" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='${n.is_read?'#fff':'var(--accent-light)'}'">
+    <div style="display:flex;align-items:flex-start;gap:9px">
+      <span style="font-size:1.1rem">${typeIcon(n.type)}</span>
+      <div style="flex:1">
+        <div style="font-weight:${n.is_read?'400':'600'};font-size:0.82rem;margin-bottom:2px">${n.title}</div>
+        <div style="font-size:0.76rem;color:var(--ink-3)">${n.message}</div>
+        <div style="font-size:0.68rem;color:var(--ink-3);margin-top:3px">${new Date(n.created_at).toLocaleString()}</div>
+      </div>
+      ${!n.is_read?'<div style="width:8px;height:8px;background:var(--accent);border-radius:50%;flex-shrink:0;margin-top:4px"></div>':''}
+    </div>
+  </div>`).join('');
+}
+
+window.toggleNotifications = async function(){
+  const dd=document.getElementById('notif-dropdown');
+  if(!dd) return;
+  const isOpen=dd.style.display!=='none';
+  dd.style.display=isOpen?'none':'block';
+  if(!isOpen) await loadNotifications();
+};
+
+window.clickNotification = async function(id, link){
+  await sb.from('notifications').update({is_read:true}).eq('id',id);
+  document.getElementById('notif-dropdown').style.display='none';
+  await loadNotifications();
+  if(link && link!=='null') navigate(link);
+};
+
+window.markAllRead = async function(){
+  await sb.from('notifications').update({is_read:true}).eq('user_id',currentUser.id).eq('is_read',false);
+  await loadNotifications();
+};
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e){
+  const bell=document.getElementById('notif-bell');
+  const dd=document.getElementById('notif-dropdown');
+  if(dd && bell && !bell.contains(e.target) && !dd.contains(e.target)){
+    dd.style.display='none';
+  }
+});
 
 async function platformNav(page){
   document.querySelectorAll('[id^="pnav-"]').forEach(e=>e.classList.remove('active'));
@@ -1625,6 +1722,8 @@ function loadHRDashboard(){
   });
   navigate('dashboard');
   setupRealtime();
+  // Load notification count
+  setTimeout(loadNotifications, 500);
 }
 
 async function navigate(page){
@@ -2042,8 +2141,10 @@ async function viewReview(id){
 
 async function approveReview(id){
   const comment=document.getElementById('review-comment').value;
+  const {data:rvData}=await sb.from('reviews').select('employee_id,employees(profile_id)').eq('id',id).single();
   await sb.from('reviews').update({status:'Approved',manager_comment:comment,reviewed_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',id);
   await logAudit('APPROVE review', 'reviews', id);
+  if(rvData?.employees?.profile_id) await sendNotification(rvData.employees.profile_id,'Review Approved','Your performance review has been approved.'+(comment?' Manager note: '+comment:''),'approval','reviews');
   closeModal();showToast('✓ Review approved.');navigate('reviews');
 }
 
