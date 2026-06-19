@@ -1965,7 +1965,7 @@ window.loadEmpPayroll = async function(){
     <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px">Banking <button class="btn btn-primary btn-sm" onclick="window.openAddBankAccount('${empRec.id}')" style="font-size:0.72rem;margin-left:8px">+ Add Account</button></div>
     <div id="emp-bank-accounts-list">Loading...</div>
   `;
-  await window.loadEmpBankAccounts(empRec.id);
+  setTimeout(()=>window.loadEmpBankAccounts(empRec.id), 50);
 };
 
 window.loadEmpBankAccounts = async function(empId){
