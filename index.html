@@ -1972,6 +1972,14 @@ async function viewEmployee(empId){
       <div><span style="font-size:0.64rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);display:block;margin-bottom:1px">Join Date</span>${e.join_date||'—'}</div>
     </div>
     <div style="background:var(--surface-2);border-radius:9px;padding:11px;margin-bottom:9px">
+      <div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px">Leave Balance</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:0.78rem">
+        <div style="text-align:center"><div style="font-size:0.62rem;color:var(--ink-3)">Annual</div><div style="font-weight:700;font-size:1.1rem">${e.annual_leave_balance||20}</div></div>
+        <div style="text-align:center"><div style="font-size:0.62rem;color:var(--ink-3)">Sick</div><div style="font-weight:700;font-size:1.1rem">${e.sick_leave_balance||10}</div></div>
+        <div style="text-align:center"><div style="font-size:0.62rem;color:var(--ink-3)">Personal</div><div style="font-weight:700;font-size:1.1rem">${e.personal_leave_balance||5}</div></div>
+      </div>
+    </div>
+    <div style="background:var(--surface-2);border-radius:9px;padding:11px;margin-bottom:9px">
       <div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px">Project</div>
       <div style="font-weight:500">${e.current_project||'Unassigned'}</div>
       <div style="font-size:0.75rem;color:var(--ink-3)">${e.current_client||''}</div>
@@ -2037,6 +2045,12 @@ async function editEmployee(empId){
       <div class="form-group"><label>Project End</label><input type="date" id="ee-pend" value="${e.project_end||''}"></div>
     </div>
 
+    <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin:14px 0 10px;padding-top:12px;border-top:1px solid var(--border)">Leave Balances (Days Allowed)</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Annual Leave</label><input type="number" id="ee-annual-bal" value="${e.annual_leave_balance||20}" min="0"></div>
+      <div class="form-group"><label>Sick Leave</label><input type="number" id="ee-sick-bal" value="${e.sick_leave_balance||10}" min="0"></div>
+      <div class="form-group"><label>Personal Leave</label><input type="number" id="ee-personal-bal" value="${e.personal_leave_balance||5}" min="0"></div>
+    </div>
     <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin:14px 0 10px;padding-top:12px;border-top:1px solid var(--border)">Visa & Immigration</div>
     <div class="form-grid">
       <div class="form-group"><label>Visa Type</label><select id="ee-visa"><option value="">None</option>${['H-1B','L-1A','OPT','STEM OPT','TN','Green Card','Citizen'].map(v=>`<option ${v===e.visa_type?'selected':''}>${v}</option>`).join('')}</select></div>
@@ -2071,6 +2085,9 @@ async function saveEditEmployee(empId){
     project_start:document.getElementById('ee-pstart').value||null,
     project_end:document.getElementById('ee-pend').value||null,
     lca_duties:document.getElementById('ee-lca').value.trim(),
+    annual_leave_balance:parseInt(document.getElementById('ee-annual-bal').value)||20,
+    sick_leave_balance:parseInt(document.getElementById('ee-sick-bal').value)||10,
+    personal_leave_balance:parseInt(document.getElementById('ee-personal-bal').value)||5,
     updated_at:new Date().toISOString()
   }).eq('id',empId);
   if(error){errEl.textContent=error.message;errEl.style.display='block';return;}
@@ -2412,6 +2429,7 @@ async function doEmpPortalLogin(){
 async function renderEmployeeDashboard(){
   const {data:emp}=await sb.from('v_employee_profile').select('*').eq('user_id',currentUser.id).maybeSingle();
   const {data:revs}=await sb.from('reviews').select('*').eq('employee_id',emp?.employee_id||'').order('review_date',{ascending:false}).limit(10);
+  const {data:empLeaves}=await sb.from('leave_requests').select('leave_type,total_days,status').eq('employee_id',emp?.employee_id||'');
   const ini=(emp?.full_name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
 
   const reviewHtml=(revs||[]).map(r=>{
@@ -2491,6 +2509,23 @@ async function renderEmployeeDashboard(){
     ${emp?.certifications||emp?.additional_skills?`<div class="card card-padded" style="margin-bottom:16px"><div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:10px">Skills & Certifications</div>${emp?.certifications?`<div style="margin-bottom:6px"><div style="font-size:0.63rem;text-transform:uppercase;color:var(--ink-3);margin-bottom:2px">Certifications</div><div style="font-size:0.84rem">${emp.certifications}</div></div>`:''} ${emp?.additional_skills?`<div><div style="font-size:0.63rem;text-transform:uppercase;color:var(--ink-3);margin-bottom:2px">Additional Skills</div><div style="font-size:0.84rem">${emp.additional_skills}</div></div>`:''}</div>`:''}
     ${emp?.lca_duties?`<div class="card card-padded" style="margin-bottom:16px"><div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:10px">LCA Job Duties</div><div style="font-size:0.84rem;line-height:1.6;color:var(--ink-2)">${emp.lca_duties}</div></div>`:''}
     ${emp?.emergency_name?`<div class="card card-padded" style="margin-bottom:16px"><div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:10px">Emergency Contact</div><div style="font-size:0.85rem"><span style="font-weight:500">${emp.emergency_name}</span>${emp.emergency_rel?' ('+emp.emergency_rel+')':''} · ${emp.emergency_phone||'—'}</div></div>`:''}
+    <div class="card card-padded" style="margin-bottom:16px">
+      <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:12px">Leave Balance</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        ${(()=>{
+          const used_annual=(empLeaves||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Annual').reduce((s,l)=>s+(l.total_days||0),0);
+          const used_sick=(empLeaves||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Sick').reduce((s,l)=>s+(l.total_days||0),0);
+          const used_personal=(empLeaves||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Personal').reduce((s,l)=>s+(l.total_days||0),0);
+          const annual_bal=(emp?.annual_leave_balance||20)-used_annual;
+          const sick_bal=(emp?.sick_leave_balance||10)-used_sick;
+          const personal_bal=(emp?.personal_leave_balance||5)-used_personal;
+          return '<div style="background:var(--surface-2);border-radius:8px;padding:11px;text-align:center"><div style="font-size:0.63rem;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px">Annual</div><div style="font-size:1.4rem;font-weight:700;color:'+( annual_bal<=3?'var(--red)':'var(--accent)')+'">'+annual_bal+'</div><div style="font-size:0.68rem;color:var(--ink-3)">of '+(emp?.annual_leave_balance||20)+' days</div></div>'
+          +'<div style="background:var(--surface-2);border-radius:8px;padding:11px;text-align:center"><div style="font-size:0.63rem;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px">Sick</div><div style="font-size:1.4rem;font-weight:700;color:'+( sick_bal<=2?'var(--red)':'var(--accent)')+'">'+sick_bal+'</div><div style="font-size:0.68rem;color:var(--ink-3)">of '+(emp?.sick_leave_balance||10)+' days</div></div>'
+          +'<div style="background:var(--surface-2);border-radius:8px;padding:11px;text-align:center"><div style="font-size:0.63rem;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px">Personal</div><div style="font-size:1.4rem;font-weight:700;color:'+( personal_bal<=1?'var(--red)':'var(--accent)')+'">'+personal_bal+'</div><div style="font-size:0.68rem;color:var(--ink-3)">of '+(emp?.personal_leave_balance||5)+' days</div></div>';
+        })()}
+      </div>
+    </div>
+
     <div class="card card-padded" style="margin-bottom:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div>
