@@ -1525,6 +1525,49 @@ document.addEventListener('click', function(e){
   }
 });
 
+
+window.toggleEmpNotifications = async function(){
+  const dd=document.getElementById('emp-notif-dropdown');
+  if(!dd) return;
+  const isOpen=dd.style.display!=='none';
+  dd.style.display=isOpen?'none':'block';
+  if(!isOpen) await window.loadEmpNotifications();
+};
+
+window.loadEmpNotifications = async function(){
+  const {data:notifs}=await sb.from('notifications').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false}).limit(20);
+  const list=notifs||[];
+  const unread=list.filter(n=>!n.is_read).length;
+  const badge=document.getElementById('emp-notif-count');
+  if(badge){ badge.textContent=unread>9?'9+':unread; badge.style.display=unread>0?'flex':'none'; }
+  const el=document.getElementById('emp-notif-list');
+  if(!el) return;
+  if(list.length===0){ el.innerHTML='<div style="padding:24px;text-align:center;color:var(--ink-3);font-size:0.81rem">No notifications yet.</div>'; return; }
+  const typeIcon=t=>t==='approval'?'✅':t==='rejection'?'❌':t==='submission'?'📋':t==='announcement'?'📢':'🔔';
+  el.innerHTML=list.map(n=>`<div onclick="window.clickEmpNotification('${n.id}')" style="padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;background:${n.is_read?'#fff':'var(--accent-light)'}">
+    <div style="display:flex;align-items:flex-start;gap:9px">
+      <span style="font-size:1.1rem">${typeIcon(n.type)}</span>
+      <div style="flex:1">
+        <div style="font-weight:${n.is_read?'400':'600'};font-size:0.82rem;margin-bottom:2px">${n.title}</div>
+        <div style="font-size:0.76rem;color:var(--ink-3)">${n.message}</div>
+        <div style="font-size:0.68rem;color:var(--ink-3);margin-top:3px">${new Date(n.created_at).toLocaleString()}</div>
+      </div>
+      ${!n.is_read?'<div style="width:8px;height:8px;background:var(--accent);border-radius:50%;flex-shrink:0;margin-top:4px"></div>':''}
+    </div>
+  </div>`).join('');
+};
+
+window.clickEmpNotification = async function(id){
+  await sb.from('notifications').update({is_read:true}).eq('id',id);
+  document.getElementById('emp-notif-dropdown').style.display='none';
+  await window.loadEmpNotifications();
+};
+
+window.markAllEmpRead = async function(){
+  await sb.from('notifications').update({is_read:true}).eq('user_id',currentUser.id).eq('is_read',false);
+  await window.loadEmpNotifications();
+};
+
 async function platformNav(page){
   document.querySelectorAll('[id^="pnav-"]').forEach(e=>e.classList.remove('active'));
   document.getElementById('pnav-'+page)?.classList.add('active');
@@ -1736,6 +1779,8 @@ function loadHRDashboard(){
   // Load notification count
   setTimeout(loadNotifications, 500);
 }
+
+
 
 async function navigate(page){
   currentPage=page;
@@ -2383,8 +2428,19 @@ async function renderEmployeeDashboard(){
       <span style="font-family:'DM Serif Display',serif;color:#fff;font-size:0.93rem">${currentTenant?.name||'NSV'}</span>
       <span style="font-size:0.62rem;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:0.08em">Employee Portal</span>
     </div>
-    <div style="display:flex;align-items:center;gap:10px">
+    <div style="display:flex;align-items:center;gap:12px">
       <span style="font-size:0.78rem;color:rgba(255,255,255,0.5)">${emp?.full_name||''}</span>
+      <div style="position:relative;cursor:pointer" onclick="window.toggleEmpNotifications()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2" width="20" height="20"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span id="emp-notif-count" style="display:none;position:absolute;top:-5px;right:-2px;background:var(--red);color:#fff;font-size:0.58rem;font-weight:700;border-radius:50%;width:15px;height:15px;align-items:center;justify-content:center;line-height:1">0</span>
+      </div>
+      <div id="emp-notif-dropdown" style="display:none;position:absolute;top:52px;right:16px;width:320px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.12);z-index:999;max-height:400px;overflow-y:auto">
+        <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:600;font-size:0.85rem">Notifications</span>
+          <button onclick="window.markAllEmpRead()" style="font-size:0.75rem;color:var(--accent);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif">Mark all read</button>
+        </div>
+        <div id="emp-notif-list"><div style="padding:20px;text-align:center;color:var(--ink-3);font-size:0.81rem">Loading...</div></div>
+      </div>
       <button onclick="doSignOut()" style="font-size:0.75rem;color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:4px 10px;cursor:pointer;font-family:'DM Sans',sans-serif">Sign Out</button>
     </div>
   </div>
@@ -2477,6 +2533,7 @@ async function renderEmployeeDashboard(){
     await window.loadEmpDocuments();
     await window.loadEmpLeaves();
     await window.loadEmpTimesheets();
+    await window.loadEmpNotifications();
   }, 100);
 }
 
