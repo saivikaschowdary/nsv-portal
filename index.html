@@ -1082,7 +1082,7 @@ window.editMyTimesheet = async function(tsId){
   </div>
   <div class="modal-footer">
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    <button class="btn btn-primary" onclick="window.resubmitTimesheet('${tsId}')">Resubmit for Approval</button>
+    <button class="btn btn-primary" onclick="window.resubmitTimesheet(this.dataset.id)" data-id="${tsId}">Resubmit for Approval</button>
   </div>`);
 };
 
