@@ -561,6 +561,8 @@ async function doManagerLogin(){
 
 async function doSignOut(){
   cleanupRealtime();
+  if(window._notifPollTimer) clearInterval(window._notifPollTimer);
+  if(window._empNotifPollTimer) clearInterval(window._empNotifPollTimer);
   await sb.auth.signOut();
   // Clear all login fields
   const fields = ['login-email','login-password','mgr-email','mgr-password','portal-email','portal-password'];
@@ -2535,6 +2537,9 @@ async function renderEmployeeDashboard(){
     await window.loadEmpTimesheets();
     await window.loadEmpNotifications();
   }, 100);
+  // Poll for new notifications every 30 seconds
+  if(window._empNotifPollTimer) clearInterval(window._empNotifPollTimer);
+  window._empNotifPollTimer = setInterval(window.loadEmpNotifications, 30000);
 }
 
 window.openEditMyProfile = async function(){
