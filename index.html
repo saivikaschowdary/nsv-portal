@@ -1115,6 +1115,11 @@ window.resubmitTimesheet = async function(tsId){
     updated_at:new Date().toISOString()
   }).eq('id',tsId);
   if(error){errEl.textContent=error.message;errEl.style.display='block';return;}
+  // Notify managers about resubmitted timesheet
+  const {data:mgrProfsR}=await sb.from('profiles').select('id').eq('tenant_id',currentTenant.id).eq('role','manager');
+  const {data:adminProfsR}=await sb.from('profiles').select('id').eq('tenant_id',currentTenant.id).eq('role','admin');
+  const toNotifyR=[...(mgrProfsR||[]),...(adminProfsR||[])];
+  for(const m of toNotifyR){ await sendNotification(m.id,'Timesheet Resubmitted',currentProfile.full_name+' has resubmitted a timesheet for re-approval.','submission','timesheets'); }
   closeModal();
   showToast('✓ Timesheet resubmitted for approval!');
   await renderEmployeeDashboard();
