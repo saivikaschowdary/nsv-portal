@@ -272,7 +272,7 @@ tr:hover td{background:var(--surface)}
     <div class="topnav-nav">
       <a onclick="navigate('dashboard')" id="nav-dashboard" class="active">Dashboard</a>
       <a onclick="navigate('team')" id="nav-team">Team</a>
-      <a onclick="navigate('directory')" id="nav-directory">Directory</a>
+
       <a onclick="navigate('employees')" id="nav-employees">Employees</a>
       <a onclick="navigate('visas')" id="nav-visas">Visas</a>
       <a onclick="navigate('projects')" id="nav-projects">Projects</a>
@@ -311,8 +311,7 @@ tr:hover td{background:var(--surface)}
       </div>
       <div style="padding:5px 6px 0">
         <div class="nav-item active" onclick="navigate('dashboard')" id="side-dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</div>
-        <div class="nav-item" onclick="navigate('directory')" id="side-directory"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Directory</div>
-        <div class="nav-item" onclick="navigate('team')" id="side-team"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team Overview</div>
+<div class="nav-item" onclick="navigate('team')" id="side-team"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team Overview</div>
         <div class="nav-item" onclick="navigate('employees')" id="side-employees"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Employees</div>
         <div class="nav-item" onclick="navigate('visas')" id="side-visas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Visa Tracker</div>
         <div class="nav-item" onclick="navigate('projects')" id="side-projects"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Project Tracker</div>
@@ -2049,11 +2048,7 @@ function loadHRDashboard(){
     const el=document.getElementById(id);
     if(el) el.style.display=p?.role==='manager'?'none':'';
   });
-  // Directory - visible to admin, hr, manager only
-  ['nav-directory','side-directory'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el) el.style.display=['admin','hr','manager'].includes(p?.role)?'':'none';
-  });
+
   navigate('dashboard');
   setupRealtime();
   // Load notification count
@@ -2074,7 +2069,7 @@ async function navigate(page){
   el.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;padding:80px"><div style="width:26px;height:26px;border:2.5px solid var(--surface-3);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite"></div></div>`;
   if(page==='dashboard')  el.innerHTML=await rDash();
   else if(page==='team')      el.innerHTML=await rTeam();
-  else if(page==='directory') el.innerHTML=await rDirectory();
+
   else if(page==='employees') el.innerHTML=await rEmployees();
   else if(page==='visas')     el.innerHTML=await rVisa();
   else if(page==='projects')  el.innerHTML=await rProjects();
