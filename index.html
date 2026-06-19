@@ -1013,11 +1013,9 @@ window.submitTimesheet = async function(empId){
     status:'Submitted'
   });
   if(error){errEl.textContent=error.message;errEl.style.display='block';return;}
-  // Notify managers about new timesheet
+  // Notify managers only about new timesheet
   const {data:mgrProfiles}=await sb.from('profiles').select('id').eq('tenant_id',currentTenant.id).eq('role','manager');
-  const {data:adminProfiles}=await sb.from('profiles').select('id').eq('tenant_id',currentTenant.id).eq('role','admin');
-  const toNotify=[...(mgrProfiles||[]),...(adminProfiles||[])];
-  for(const m of toNotify){ await sendNotification(m.id,'New Timesheet Submitted',currentProfile.full_name+' submitted a timesheet for approval.','submission','timesheets'); }
+  for(const m of (mgrProfiles||[])){ await sendNotification(m.id,'New Timesheet Submitted',currentProfile.full_name+' submitted a timesheet for approval.','submission','timesheets'); }
   closeModal();
   showToast('✓ Timesheet submitted successfully!');
   await renderEmployeeDashboard();
@@ -1115,11 +1113,9 @@ window.resubmitTimesheet = async function(tsId){
     updated_at:new Date().toISOString()
   }).eq('id',tsId);
   if(error){errEl.textContent=error.message;errEl.style.display='block';return;}
-  // Notify managers about resubmitted timesheet
+  // Notify managers only about resubmitted timesheet
   const {data:mgrProfsR}=await sb.from('profiles').select('id').eq('tenant_id',currentTenant.id).eq('role','manager');
-  const {data:adminProfsR}=await sb.from('profiles').select('id').eq('tenant_id',currentTenant.id).eq('role','admin');
-  const toNotifyR=[...(mgrProfsR||[]),...(adminProfsR||[])];
-  for(const m of toNotifyR){ await sendNotification(m.id,'Timesheet Resubmitted',currentProfile.full_name+' has resubmitted a timesheet for re-approval.','submission','timesheets'); }
+  for(const m of (mgrProfsR||[])){ await sendNotification(m.id,'Timesheet Resubmitted',currentProfile.full_name+' has resubmitted a timesheet for re-approval.','submission','timesheets'); }
   closeModal();
   showToast('✓ Timesheet resubmitted for approval!');
   await renderEmployeeDashboard();
@@ -1262,11 +1258,9 @@ window.submitLeave = async function(empId){
     status:'Pending'
   });
   if(error){errEl.textContent=error.message;errEl.style.display='block';return;}
-  // Notify managers about new leave request
+  // Notify managers only about new leave request
   const {data:mgrProfs}=await sb.from('profiles').select('id').eq('tenant_id',currentTenant.id).eq('role','manager');
-  const {data:adminProfs}=await sb.from('profiles').select('id').eq('tenant_id',currentTenant.id).eq('role','admin');
-  const toNotifyL=[...(mgrProfs||[]),...(adminProfs||[])];
-  for(const m of toNotifyL){ await sendNotification(m.id,'New Leave Request',currentProfile.full_name+' submitted a leave request for approval.','submission','leaves'); }
+  for(const m of (mgrProfs||[])){ await sendNotification(m.id,'New Leave Request',currentProfile.full_name+' submitted a leave request for approval.','submission','leaves'); }
   closeModal();showToast('✓ Leave request submitted!');
   await window.loadEmpLeaves();
 };
