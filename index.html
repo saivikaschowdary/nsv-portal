@@ -1859,19 +1859,25 @@ async function rPayroll(){
   <div class="page-body">
     <div class="card table-wrap">
       <table>
-        <thead><tr><th>Employee</th><th>Type</th><th>Salary/Rate</th><th>Frequency</th><th>Effective Date</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Employee</th><th>Type</th><th>Pay Rate</th><th>Billing Rate</th>${isAdmin()?'<th>Margin</th>':''}<th>Frequency</th><th>Status</th><th></th></tr></thead>
         <tbody>${list.map((e,i)=>{
           const p=payMap[e.employee_id];
+          const payRate=p?.amount||(p?.salary_type==='Hourly'?p?.amount:null);
+          const billRate=p?.billing_rate;
+          const margin=billRate&&payRate?billRate-payRate:null;
+          const marginPct=margin&&payRate?((margin/billRate)*100).toFixed(1):null;
           return`<tr>
             <td><div class="emp-cell">${mkAv(e.full_name,i)}<div><span class="emp-cell-name">${e.full_name}</span><span class="emp-cell-sub">${e.job_title||''}</span></div></div></td>
             <td>${p?.employment_type||'—'}</td>
             <td style="font-weight:600">${p?.amount?'$'+Number(p.amount).toLocaleString()+(p.salary_type==='Hourly'?'/hr':'/yr'):'—'}</td>
+            <td style="font-weight:600;color:var(--blue)">${billRate?'$'+Number(billRate).toLocaleString()+'/hr':'—'}</td>
+            ${isAdmin()?`<td style="font-weight:600;color:${margin>0?'var(--accent)':'var(--red)'}">${margin!==null?'$'+margin.toFixed(2)+'/hr ('+marginPct+'%)':'—'}</td>`:''}
             <td>${p?.pay_frequency||'—'}</td>
-            <td style="color:var(--ink-3)">${p?.effective_date||'—'}</td>
             <td>${sBadge(e.status||'Active')}</td>
             <td style="display:flex;gap:6px">
               <button class="btn btn-ghost btn-sm" onclick="window.openPayrollEdit('${e.employee_id}','${e.full_name}')">Edit</button>
               <button class="btn btn-ghost btn-sm" onclick="window.openAdminBankView('${e.employee_id}','${e.full_name}')">🏦 Bank</button>
+              ${isAdmin()?`<button class="btn btn-ghost btn-sm" onclick="window.openRevenueView('${e.employee_id}','${e.full_name}')">📊 Revenue</button>`:''}
             </td>
           </tr>`;
         }).join('')}
@@ -1909,6 +1915,20 @@ window.openPayrollEdit = async function(employeeId, empName){
     <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin:14px 0 10px;padding-top:12px;border-top:1px solid var(--border)">Banking</div>
     <div style="background:var(--accent-light);border-radius:8px;padding:10px 12px;font-size:0.79rem;color:var(--accent)">Bank accounts are managed by the employee directly from their portal.</div>
 
+    ${isAdmin()?`
+    <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin:14px 0 10px;padding-top:12px;border-top:1px solid var(--border)">Billing & Revenue</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Pay Rate ($/hr)</label><input type="number" id="pr-payrate" value="${p?.amount&&p?.salary_type==='Hourly'?p.amount:''}" placeholder="Employee hourly pay"></div>
+      <div class="form-group"><label>Billing Rate ($/hr)</label><input type="number" id="pr-billrate" value="${p?.billing_rate||''}" placeholder="What client is charged"></div>
+      <div class="form-group"><label>Billing Type</label><select id="pr-billtype"><option value="">Select...</option><option ${p?.billing_type==='Hourly'?'selected':''}>Hourly</option><option ${p?.billing_type==='Fixed'?'selected':''}>Fixed</option><option ${p?.billing_type==='Milestone'?'selected':''}>Milestone</option></select></div>
+      <div class="form-group"><label>Billing Start Date</label><input type="date" id="pr-billstart" value="${p?.billing_start_date||''}"></div>
+    </div>`:''}
+    ${isHR()?`
+    <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin:14px 0 10px;padding-top:12px;border-top:1px solid var(--border)">Billing & Pay Rates</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Pay Rate ($/hr)</label><input type="number" id="pr-payrate" value="${p?.amount&&p?.salary_type==='Hourly'?p.amount:''}" placeholder="Employee hourly pay"></div>
+      <div class="form-group"><label>Billing Rate ($/hr)</label><input type="number" id="pr-billrate" value="${p?.billing_rate||''}" placeholder="What client is charged"></div>
+    </div>`:''}
     <div class="form-group" style="margin-top:8px"><label>Notes</label><textarea id="pr-notes" rows="2" style="resize:vertical">${p?.notes||''}</textarea></div>
     <div id="pr-err" style="display:none;background:var(--red-light);border-radius:8px;padding:9px 12px;font-size:0.79rem;color:var(--red);margin-top:9px"></div>
   </div>
@@ -1932,10 +1952,9 @@ window.savePayroll = async function(employeeId){
     tax_filing_status:document.getElementById('pr-taxstatus').value||null,
     contribution_401k:parseFloat(document.getElementById('pr-401k').value)||null,
     health_insurance:parseFloat(document.getElementById('pr-health').value)||null,
-    bank_name:document.getElementById('pr-bank').value.trim()||null,
-    account_type:document.getElementById('pr-accttype').value||null,
-    account_number:document.getElementById('pr-acctnum').value.trim()||null,
-    routing_number:document.getElementById('pr-routing').value.trim()||null,
+    billing_rate:parseFloat(document.getElementById('pr-billrate')?.value)||null,
+    billing_type:document.getElementById('pr-billtype')?.value||null,
+    billing_start_date:document.getElementById('pr-billstart')?.value||null,
     notes:document.getElementById('pr-notes').value.trim()||null
   };
   const {error}=await sb.from('payroll').upsert(payload,{onConflict:'employee_id'});
@@ -2210,6 +2229,57 @@ window.adminDeleteBankAccount = async function(accountId, employeeId, empName){
   await logAudit('DELETE bank account for '+empName,'employee_bank_accounts',employeeId);
   showToast('Bank account deleted.');
   await window.openAdminBankView(employeeId, empName);
+};
+
+
+window.openRevenueView = async function(employeeId, empName){
+  const {data:p}=await sb.from('payroll').select('*').eq('employee_id',employeeId).maybeSingle();
+  const {data:ts}=await sb.from('timesheets').select('total_hours,status,week_start').eq('employee_id',employeeId).eq('status','Approved').order('week_start');
+
+  const approvedHours=(ts||[]).reduce((s,t)=>s+(t.total_hours||0),0);
+  const billRate=p?.billing_rate||0;
+  const payRate=p?.amount&&p?.salary_type==='Hourly'?p.amount:0;
+  const totalRevenue=approvedHours*billRate;
+  const totalCost=approvedHours*payRate;
+  const netMargin=totalRevenue-totalCost;
+  const marginPct=totalRevenue>0?((netMargin/totalRevenue)*100).toFixed(1):0;
+
+  showModal(`
+  <div class="modal-header"><h3>Revenue Overview — ${empName}</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px">
+      <div style="background:var(--surface-2);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:0.63rem;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px">Total Hours Billed</div>
+        <div style="font-size:1.6rem;font-weight:700;color:var(--accent)">${approvedHours}</div>
+        <div style="font-size:0.7rem;color:var(--ink-3)">Approved timesheets</div>
+      </div>
+      <div style="background:var(--accent-light);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:0.63rem;text-transform:uppercase;color:var(--accent);margin-bottom:4px">Total Revenue</div>
+        <div style="font-size:1.6rem;font-weight:700;color:var(--accent)">$${totalRevenue.toLocaleString()}</div>
+        <div style="font-size:0.7rem;color:var(--accent)">${billRate?'@ $'+billRate+'/hr':'No billing rate set'}</div>
+      </div>
+      <div style="background:var(--surface-2);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:0.63rem;text-transform:uppercase;color:var(--ink-3);margin-bottom:4px">Total Cost</div>
+        <div style="font-size:1.6rem;font-weight:700;color:var(--ink)">${payRate?'$'+totalCost.toLocaleString():'—'}</div>
+        <div style="font-size:0.7rem;color:var(--ink-3)">${payRate?'@ $'+payRate+'/hr':'No pay rate set'}</div>
+      </div>
+      <div style="background:${netMargin>=0?'var(--accent-light)':'var(--red-light)'};border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:0.63rem;text-transform:uppercase;color:${netMargin>=0?'var(--accent)':'var(--red)'};margin-bottom:4px">Net Margin</div>
+        <div style="font-size:1.6rem;font-weight:700;color:${netMargin>=0?'var(--accent)':'var(--red)'}">$${netMargin.toLocaleString()}</div>
+        <div style="font-size:0.7rem;color:${netMargin>=0?'var(--accent)':'var(--red)'}">${marginPct}% margin</div>
+      </div>
+    </div>
+    ${!billRate||!payRate?'<div style="background:var(--amber-light);border-radius:8px;padding:10px 12px;font-size:0.79rem;color:var(--amber)">⚠️ Set billing rate and pay rate in payroll to see accurate revenue calculations.</div>':''}
+    ${ts?.length?`
+    <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin:12px 0 8px">Approved Timesheets</div>
+    <div style="max-height:200px;overflow-y:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:0.79rem">
+        <thead><tr style="border-bottom:1px solid var(--border)"><th style="padding:6px;text-align:left">Week</th><th style="padding:6px;text-align:right">Hours</th><th style="padding:6px;text-align:right">Revenue</th></tr></thead>
+        <tbody>${(ts||[]).map(t=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:6px;color:var(--ink-3)">${t.week_start}</td><td style="padding:6px;text-align:right;font-weight:500">${t.total_hours}h</td><td style="padding:6px;text-align:right;color:var(--accent)">$${((t.total_hours||0)*billRate).toLocaleString()}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>`:'<div style="color:var(--ink-3);font-size:0.81rem;text-align:center;padding:16px">No approved timesheets yet.</div>'}
+  </div>
+  <div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">Close</button></div>`);
 };
 
 async function platformNav(page){
