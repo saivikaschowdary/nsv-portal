@@ -2151,6 +2151,8 @@ async function rEmployees(){
   const { data } = await sb.from('v_employee_profile').select('*').eq('tenant_id',tid()).order('full_name');
   const list=data||[];
   const depts=[...new Set(list.map(e=>e.department_name).filter(Boolean))].sort();
+  const allDepts=await sb.from('departments').select('id,name').eq('tenant_id',tid()).order('name');
+  const deptOpts=(allDepts.data||[]).map(d=>'<option value="'+d.id+'">'+d.name+'</option>').join('');
   return`<div class="page-header"><div><h2>Employees</h2><p>${list.length} total</p></div><button class="btn btn-primary btn-sm" onclick="openAddEmployee()">+ Add Employee</button></div>
   <div class="page-body">
     <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
@@ -2166,10 +2168,20 @@ async function rEmployees(){
         <option value="Inactive">Inactive</option>
       </select>
     </div>
+    <div id="bulk-action-bar" style="display:none;background:var(--ink);border-radius:10px;padding:10px 14px;margin-bottom:10px;align-items:center;gap:10px;flex-wrap:wrap">
+      <span id="bulk-count" style="color:#fff;font-size:0.82rem;font-weight:500">0 selected</span>
+      <div style="flex:1"></div>
+      <select id="bulk-status" style="padding:6px 10px;border-radius:6px;font-size:0.8rem;border:none"><option value="">Change Status...</option><option value="Active">Active</option><option value="Bench">Bench</option><option value="Inactive">Inactive</option></select>
+      <button class="btn btn-sm" style="background:var(--accent);color:#fff;border:none" onclick="window.bulkChangeStatus()">Apply</button>
+      <select id="bulk-dept" style="padding:6px 10px;border-radius:6px;font-size:0.8rem;border:none"><option value="">Change Department...</option>${deptOpts}</select>
+      <button class="btn btn-sm" style="background:var(--accent);color:#fff;border:none" onclick="window.bulkChangeDept()">Apply</button>
+      <button class="btn btn-sm" style="background:var(--red);color:#fff;border:none" onclick="window.bulkDelete()">🗑 Delete</button>
+    </div>
   <div class="card table-wrap"><table id="emp-table">
-    <thead><tr><th>Name</th><th>Title</th><th>Department</th><th>Manager</th><th>Status</th><th>Visa</th><th></th></tr></thead>
-    <tbody>${list.length?list.map((e,i)=>`<tr data-name="${(e.full_name||'').toLowerCase()}" data-email="${(e.email||'').toLowerCase()}" data-title="${(e.job_title||'').toLowerCase()}" data-dept="${e.department_name||''}" data-status="${e.status||'Active'}" style="cursor:pointer" onclick="viewEmployee('${e.employee_id}')" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
-      <td><div class="emp-cell">${mkAv(e.full_name,i)}<div><span class="emp-cell-name">${e.full_name}</span><span class="emp-cell-sub">${e.email}</span></div></div></td>
+    <thead><tr><th style="width:36px"><input type="checkbox" id="emp-select-all" onchange="window.toggleSelectAll(this.checked)" style="accent-color:var(--accent)"></th><th>Name</th><th>Title</th><th>Department</th><th>Manager</th><th>Status</th><th>Visa</th></tr></thead>
+    <tbody>${list.length?list.map((e,i)=>`<tr data-name="${(e.full_name||'').toLowerCase()}" data-email="${(e.email||'').toLowerCase()}" data-title="${(e.job_title||'').toLowerCase()}" data-dept="${e.department_name||''}" data-status="${e.status||'Active'}" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.querySelector('.emp-checkbox')?.checked||this.style.removeProperty('background')">
+      <td onclick="event.stopPropagation()"><input type="checkbox" class="emp-checkbox" data-empid="${e.employee_id}" data-userid="${e.user_id}" onchange="window.updateBulkBar()" style="accent-color:var(--accent)"></td>
+      <td style="cursor:pointer" onclick="viewEmployee('${e.employee_id}')"><div class="emp-cell">${mkAv(e.full_name,i)}<div><span class="emp-cell-name">${e.full_name}</span><span class="emp-cell-sub">${e.email}</span></div></div></td>
       <td>${e.job_title||'—'}</td><td>${e.department_name||'—'}</td><td>${e.manager_name||'—'}</td>
       <td>${sBadge(e.status||'Active')}</td>
       <td>${e.visa_type?`<span class="badge badge-gray">${e.visa_type}</span>`:'—'}</td>
