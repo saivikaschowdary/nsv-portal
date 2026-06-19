@@ -280,6 +280,7 @@ tr:hover td{background:var(--surface)}
       <a onclick="navigate('leaves')" id="nav-leaves">Leave</a>
       <a onclick="navigate('users')" id="nav-users">Users</a>
       <a onclick="navigate('settings')" id="nav-settings" style="display:none">Settings</a>
+      <a onclick="navigate('audit')" id="nav-audit" style="display:none">Audit Log</a>
     </div>
     <div class="topnav-actions">
       <span style="font-size:0.71rem;color:rgba(255,255,255,0.3)"><span class="realtime-dot"></span>Live</span>
@@ -306,6 +307,7 @@ tr:hover td{background:var(--surface)}
         <div class="nav-item" onclick="navigate('timesheets')" id="side-timesheets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Timesheets</div>
         <div class="nav-item" onclick="navigate('leaves')" id="side-leaves"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Leave</div>
         <div class="nav-item" onclick="navigate('users')" id="side-users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>Manage Users</div>
+        <div class="nav-item" onclick="navigate('audit')" id="side-audit" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Audit Log</div>
         <div class="nav-item" onclick="navigate('settings')" id="side-settings" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</div>
       </div>
     </div>
@@ -1363,6 +1365,54 @@ window.loadEmployeeDocsForAdmin = async function(elId, employeeRecordId){
   </div>`).join('');
 };
 
+
+// ════════════════════════════════════════════════════════════
+// AUDIT LOG
+// ════════════════════════════════════════════════════════════
+async function logAudit(action, tableName, recordId, oldValues=null, newValues=null){
+  try {
+    await sb.from('audit_log').insert({
+      tenant_id: tid(),
+      user_id: currentUser?.id,
+      action,
+      table_name: tableName,
+      record_id: recordId||null,
+      old_values: oldValues,
+      new_values: newValues
+    });
+  } catch(e){ /* silently fail - don't break main flow */ }
+}
+
+async function rAuditLog(){
+  if(!isAdmin()) return '<div class="page-body"><div class="card card-padded">Admin access only.</div></div>';
+  const {data:logs}=await sb.from('audit_log').select('*').eq('tenant_id',tid()).order('created_at',{ascending:false}).limit(100);
+  const {data:profs}=await sb.from('profiles').select('id,full_name,role').eq('tenant_id',tid());
+  const profMap={};(profs||[]).forEach(p=>profMap[p.id]=p);
+  const list=logs||[];
+
+  const actionColor=a=>a.includes('DELETE')||a.includes('delete')?'var(--red)':a.includes('ADD')||a.includes('CREATE')||a.includes('add')||a.includes('create')?'var(--accent)':a.includes('APPROVE')||a.includes('approve')?'var(--blue)':a.includes('REJECT')||a.includes('reject')?'var(--amber)':'var(--ink-3)';
+  const actionIcon=a=>a.includes('DELETE')||a.includes('delete')?'🗑️':a.includes('ADD')||a.includes('CREATE')||a.includes('add')||a.includes('create')?'✅':a.includes('APPROVE')||a.includes('approve')?'👍':a.includes('REJECT')||a.includes('reject')?'❌':a.includes('UPDATE')||a.includes('update')||a.includes('EDIT')||a.includes('edit')?'✏️':'📋';
+
+  return`<div class="page-header"><div><h2>Audit Log</h2><p>Last ${list.length} actions</p></div></div>
+  <div class="page-body">
+    ${list.length===0?'<div class="card card-padded" style="text-align:center;padding:40px;color:var(--ink-3)">No audit logs yet. Actions will appear here as users interact with the system.</div>':
+    `<div class="card table-wrap"><table>
+      <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Table</th></tr></thead>
+      <tbody>${list.map(l=>{
+        const prof=profMap[l.user_id];
+        const time=new Date(l.created_at).toLocaleString();
+        return`<tr>
+          <td style="font-size:0.75rem;color:var(--ink-3);white-space:nowrap">${time}</td>
+          <td><div style="font-weight:500;font-size:0.82rem">${prof?.full_name||'Unknown'}</div><div style="font-size:0.7rem;color:var(--ink-3)">${prof?.role||''}</div></td>
+          <td><span style="color:${actionColor(l.action)};font-weight:500;font-size:0.82rem">${actionIcon(l.action)} ${l.action}</span></td>
+          <td style="font-size:0.78rem;color:var(--ink-3)">${l.table_name||'—'}</td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table></div>`}
+  </div>`;
+}
+
 async function platformNav(page){
   document.querySelectorAll('[id^="pnav-"]').forEach(e=>e.classList.remove('active'));
   document.getElementById('pnav-'+page)?.classList.add('active');
@@ -1554,8 +1604,8 @@ function loadHRDashboard(){
   document.getElementById('sidebar-company').textContent = t?.name||'Company';
   document.getElementById('topnav-user').textContent     = p?.full_name?.split(' ')[0]||'Admin';
   const isAdm = p?.role==='admin';
-  // Settings - admin only
-  ['nav-settings','side-settings'].forEach(id=>{
+  // Settings and Audit - admin only
+  ['nav-settings','side-settings','nav-audit','side-audit'].forEach(id=>{
     const el=document.getElementById(id);
     if(el) el.style.display=isAdm?'':'none';
   });
