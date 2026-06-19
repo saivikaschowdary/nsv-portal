@@ -272,6 +272,7 @@ tr:hover td{background:var(--surface)}
     <div class="topnav-nav">
       <a onclick="navigate('dashboard')" id="nav-dashboard" class="active">Dashboard</a>
       <a onclick="navigate('team')" id="nav-team">Team</a>
+      <a onclick="navigate('directory')" id="nav-directory">Directory</a>
       <a onclick="navigate('employees')" id="nav-employees">Employees</a>
       <a onclick="navigate('visas')" id="nav-visas">Visas</a>
       <a onclick="navigate('projects')" id="nav-projects">Projects</a>
@@ -310,6 +311,7 @@ tr:hover td{background:var(--surface)}
       </div>
       <div style="padding:5px 6px 0">
         <div class="nav-item active" onclick="navigate('dashboard')" id="side-dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</div>
+        <div class="nav-item" onclick="navigate('directory')" id="side-directory"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Directory</div>
         <div class="nav-item" onclick="navigate('team')" id="side-team"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>Team Overview</div>
         <div class="nav-item" onclick="navigate('employees')" id="side-employees"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Employees</div>
         <div class="nav-item" onclick="navigate('visas')" id="side-visas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Visa Tracker</div>
@@ -1791,6 +1793,56 @@ window.bulkDelete = async function(){
   navigate('employees');
 };
 
+
+// ════════════════════════════════════════════════════════════
+// EMPLOYEE DIRECTORY
+// ════════════════════════════════════════════════════════════
+async function rDirectory(){
+  const {data}=await sb.from('v_employee_profile').select('employee_id,full_name,job_title,department_name,email,phone,work_mode,manager_name,status').eq('tenant_id',tid()).order('full_name');
+  const list=data||[];
+  const depts=[...new Set(list.map(e=>e.department_name).filter(Boolean))].sort();
+
+  return`<div class="page-header"><div><h2>Employee Directory</h2><p>${list.length} employees</p></div></div>
+  <div class="page-body">
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <input id="dir-search" placeholder="Search by name, title, email..." style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;font-family:'DM Sans',sans-serif" oninput="window.filterDirectory()">
+      <select id="dir-dept" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;font-family:'DM Sans',sans-serif" onchange="window.filterDirectory()">
+        <option value="">All Departments</option>
+        ${depts.map(d=>`<option value="${d}">${d}</option>`).join('')}
+      </select>
+    </div>
+    <div id="dir-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
+      ${list.length===0?'<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--ink-3)">No employees yet.</div>':
+      list.map((e,i)=>`<div class="card card-padded dir-card" data-name="${(e.full_name||'').toLowerCase()}" data-title="${(e.job_title||'').toLowerCase()}" data-email="${(e.email||'').toLowerCase()}" data-dept="${e.department_name||''}" style="cursor:pointer;transition:all 0.15s" onclick="viewEmployee('${e.employee_id}')" onmouseover="this.style.boxShadow='0 4px 18px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          ${mkAv(e.full_name,i,40)}
+          <div>
+            <div style="font-weight:600;font-size:0.88rem">${e.full_name}</div>
+            <div style="font-size:0.74rem;color:var(--ink-3)">${e.job_title||'—'}</div>
+          </div>
+        </div>
+        <div style="font-size:0.75rem;color:var(--ink-3);border-top:1px solid var(--border);padding-top:8px">
+          <div style="margin-bottom:4px">🏢 ${e.department_name||'—'}</div>
+          <div style="margin-bottom:4px">📧 <a href="mailto:${e.email}" onclick="event.stopPropagation()" style="color:var(--accent)">${e.email}</a></div>
+          ${e.phone?`<div style="margin-bottom:4px">📞 ${e.phone}</div>`:''}
+          ${e.work_mode?`<div style="margin-bottom:4px">💼 ${e.work_mode}</div>`:''}
+          ${e.manager_name?`<div>👤 Manager: ${e.manager_name}</div>`:''}
+        </div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+window.filterDirectory = function(){
+  const search=document.getElementById('dir-search')?.value.toLowerCase()||'';
+  const dept=document.getElementById('dir-dept')?.value||'';
+  document.querySelectorAll('.dir-card').forEach(card=>{
+    const matchSearch=!search||card.dataset.name?.includes(search)||card.dataset.title?.includes(search)||card.dataset.email?.includes(search);
+    const matchDept=!dept||card.dataset.dept===dept;
+    card.style.display=(matchSearch&&matchDept)?'':'none';
+  });
+};
+
 async function platformNav(page){
   document.querySelectorAll('[id^="pnav-"]').forEach(e=>e.classList.remove('active'));
   document.getElementById('pnav-'+page)?.classList.add('active');
@@ -1997,6 +2049,11 @@ function loadHRDashboard(){
     const el=document.getElementById(id);
     if(el) el.style.display=p?.role==='manager'?'none':'';
   });
+  // Directory - visible to admin, hr, manager only
+  ['nav-directory','side-directory'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display=['admin','hr','manager'].includes(p?.role)?'':'none';
+  });
   navigate('dashboard');
   setupRealtime();
   // Load notification count
@@ -2017,6 +2074,7 @@ async function navigate(page){
   el.innerHTML=`<div style="display:flex;align-items:center;justify-content:center;padding:80px"><div style="width:26px;height:26px;border:2.5px solid var(--surface-3);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite"></div></div>`;
   if(page==='dashboard')  el.innerHTML=await rDash();
   else if(page==='team')      el.innerHTML=await rTeam();
+  else if(page==='directory') el.innerHTML=await rDirectory();
   else if(page==='employees') el.innerHTML=await rEmployees();
   else if(page==='visas')     el.innerHTML=await rVisa();
   else if(page==='projects')  el.innerHTML=await rProjects();
