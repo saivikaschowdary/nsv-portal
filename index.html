@@ -1904,12 +1904,7 @@ window.openPayrollEdit = async function(employeeId, empName){
     </div>
 
     <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin:14px 0 10px;padding-top:12px;border-top:1px solid var(--border)">Banking</div>
-    <div class="form-grid">
-      <div class="form-group"><label>Bank Name</label><input id="pr-bank" value="${p?.bank_name||''}" placeholder="e.g. Chase, Bank of America"></div>
-      <div class="form-group"><label>Account Type</label><select id="pr-accttype"><option value="">Select...</option><option ${p?.account_type==='Checking'?'selected':''}>Checking</option><option ${p?.account_type==='Savings'?'selected':''}>Savings</option></select></div>
-      <div class="form-group"><label>Account Number</label><input id="pr-acctnum" value="${p?.account_number||''}" placeholder="Account number"></div>
-      <div class="form-group"><label>Routing Number</label><input id="pr-routing" value="${p?.routing_number||''}" placeholder="9-digit routing number"></div>
-    </div>
+    <div style="background:var(--accent-light);border-radius:8px;padding:10px 12px;font-size:0.79rem;color:var(--accent)">Bank accounts are managed by the employee directly from their portal.</div>
 
     <div class="form-group" style="margin-top:8px"><label>Notes</label><textarea id="pr-notes" rows="2" style="resize:vertical">${p?.notes||''}</textarea></div>
     <div id="pr-err" style="display:none;background:var(--red-light);border-radius:8px;padding:9px 12px;font-size:0.79rem;color:var(--red);margin-top:9px"></div>
@@ -1967,49 +1962,128 @@ window.loadEmpPayroll = async function(){
       <div style="background:var(--surface-2);border-radius:8px;padding:10px;text-align:center"><div style="font-size:0.62rem;color:var(--ink-3)">401k</div><div style="font-weight:500;margin-top:2px">${p.contribution_401k?p.contribution_401k+'%':'—'}</div></div>
       <div style="background:var(--surface-2);border-radius:8px;padding:10px;text-align:center"><div style="font-size:0.62rem;color:var(--ink-3)">Health Ins.</div><div style="font-weight:500;margin-top:2px">${p.health_insurance?'$'+p.health_insurance+'/mo':'—'}</div></div>
     </div>
-    <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px">Banking <button class="btn btn-ghost btn-sm" onclick="window.openEmpBankEdit('${empRec.id}')" style="font-size:0.72rem;margin-left:8px">Edit Bank Details</button></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.8rem">
-      <div style="background:var(--surface-2);border-radius:8px;padding:10px"><div style="font-size:0.62rem;color:var(--ink-3)">Bank</div><div style="font-weight:500;margin-top:2px">${p.bank_name||'—'}</div></div>
-      <div style="background:var(--surface-2);border-radius:8px;padding:10px"><div style="font-size:0.62rem;color:var(--ink-3)">Account Type</div><div style="font-weight:500;margin-top:2px">${p.account_type||'—'}</div></div>
-      <div style="background:var(--surface-2);border-radius:8px;padding:10px"><div style="font-size:0.62rem;color:var(--ink-3)">Account Number</div><div style="font-weight:500;margin-top:2px">${p.account_number?'****'+p.account_number.slice(-4):'—'}</div></div>
-      <div style="background:var(--surface-2);border-radius:8px;padding:10px"><div style="font-size:0.62rem;color:var(--ink-3)">Routing Number</div><div style="font-weight:500;margin-top:2px">${p.routing_number?'****'+p.routing_number.slice(-4):'—'}</div></div>
-    </div>
+    <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px">Banking <button class="btn btn-primary btn-sm" onclick="window.openAddBankAccount('${empRec.id}')" style="font-size:0.72rem;margin-left:8px">+ Add Account</button></div>
+    <div id="emp-bank-accounts-list">Loading...</div>
   `;
+  await window.loadEmpBankAccounts(empRec.id);
 };
 
-window.openEmpBankEdit = async function(empId){
-  const {data:p}=await sb.from('payroll').select('*').eq('employee_id',empId).maybeSingle();
-  showModal(`
-  <div class="modal-header"><h3>Update Bank Details</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
-  <div class="modal-body">
-    <div style="background:var(--amber-light);border-radius:8px;padding:10px 12px;font-size:0.79rem;color:var(--amber);margin-bottom:14px">⚠️ HR will be notified when you update your bank details.</div>
-    <div class="form-grid">
-      <div class="form-group"><label>Bank Name</label><input id="eb-bank" value="${p?.bank_name||''}" placeholder="e.g. Chase"></div>
-      <div class="form-group"><label>Account Type</label><select id="eb-accttype"><option value="">Select...</option><option ${p?.account_type==='Checking'?'selected':''}>Checking</option><option ${p?.account_type==='Savings'?'selected':''}>Savings</option></select></div>
-      <div class="form-group"><label>Account Number</label><input id="eb-acctnum" value="${p?.account_number||''}" placeholder="Account number"></div>
-      <div class="form-group"><label>Routing Number</label><input id="eb-routing" value="${p?.routing_number||''}" placeholder="9-digit routing number"></div>
+window.loadEmpBankAccounts = async function(empId){
+  const el=document.getElementById('emp-bank-accounts-list');
+  if(!el) return;
+  const {data:accounts}=await sb.from('employee_bank_accounts').select('*').eq('employee_id',empId).order('is_primary',{ascending:false});
+  const list=accounts||[];
+  const totalPct=list.reduce((s,a)=>s+(a.pay_split_percentage||0),0);
+  if(list.length===0){ el.innerHTML='<div style="color:var(--ink-3);font-size:0.81rem;text-align:center;padding:14px">No bank accounts added yet.</div>'; return; }
+  el.innerHTML=`<div style="margin-bottom:8px;font-size:0.78rem;color:${totalPct===100?'var(--accent)':'var(--red)'};font-weight:600">Total split: ${totalPct}% ${totalPct===100?'✓':'(must equal 100%)'}</div>`+
+  list.map(a=>`<div style="border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div style="font-weight:600;font-size:0.85rem">${a.bank_name}${a.nickname?' ('+a.nickname+')':''}${a.is_primary?' <span class="badge badge-green" style="font-size:0.65rem">Primary</span>':''}</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="window.openEditBankAccount('${a.id}','${empId}')">Edit</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="window.deleteBankAccount('${a.id}','${empId}')">Delete</button>
+      </div>
     </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:0.76rem">
+      <div><span style="color:var(--ink-3)">Type: </span>${a.account_type||'—'}</div>
+      <div><span style="color:var(--ink-3)">Account: </span>****${(a.account_number||'').slice(-4)}</div>
+      <div><span style="color:var(--ink-3)">Split: </span><strong style="color:var(--accent)">${a.pay_split_percentage}%</strong></div>
+    </div>
+  </div>`).join('');
+};
+
+window.openAddBankAccount = function(empId){
+  showModal(`
+  <div class="modal-header"><h3>Add Bank Account</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    <div style="background:var(--amber-light);border-radius:8px;padding:10px 12px;font-size:0.79rem;color:var(--amber);margin-bottom:14px">⚠️ HR will be notified when you add a bank account.</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Bank Name *</label><input id="nb-bank" placeholder="e.g. Chase, Bank of America"></div>
+      <div class="form-group"><label>Nickname</label><input id="nb-nickname" placeholder="e.g. Savings, Main"></div>
+      <div class="form-group"><label>Account Type *</label><select id="nb-accttype"><option value="">Select...</option><option>Checking</option><option>Savings</option></select></div>
+      <div class="form-group"><label>Account Number *</label><input id="nb-acctnum" placeholder="Account number"></div>
+      <div class="form-group"><label>Routing Number *</label><input id="nb-routing" placeholder="9-digit routing number"></div>
+      <div class="form-group"><label>Pay Split % *</label><input type="number" id="nb-split" placeholder="e.g. 100 or 50" min="1" max="100" value="100"></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;margin-top:4px;cursor:pointer"><input type="checkbox" id="nb-primary" style="accent-color:var(--accent)"> Set as primary account</label>
+    <div id="nb-err" style="display:none;background:var(--red-light);border-radius:8px;padding:9px 12px;font-size:0.79rem;color:var(--red);margin-top:9px"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="window.saveNewBankAccount('${empId}')">Add Account</button>
+  </div>`);
+};
+
+window.saveNewBankAccount = async function(empId){
+  const errEl=document.getElementById('nb-err');
+  const bank=document.getElementById('nb-bank').value.trim();
+  const acct=document.getElementById('nb-acctnum').value.trim();
+  const routing=document.getElementById('nb-routing').value.trim();
+  const split=parseFloat(document.getElementById('nb-split').value)||0;
+  if(!bank||!acct||!routing||!split){errEl.textContent='Bank name, account number, routing number and split % are required.';errEl.style.display='block';return;}
+  if(split<1||split>100){errEl.textContent='Split percentage must be between 1 and 100.';errEl.style.display='block';return;}
+  const {error}=await sb.from('employee_bank_accounts').insert({
+    tenant_id:currentTenant.id, employee_id:empId,
+    bank_name:bank,
+    nickname:document.getElementById('nb-nickname').value.trim()||null,
+    account_type:document.getElementById('nb-accttype').value||null,
+    account_number:acct, routing_number:routing,
+    pay_split_percentage:split,
+    is_primary:document.getElementById('nb-primary').checked
+  });
+  if(error){errEl.textContent=error.message;errEl.style.display='block';return;}
+  const {data:hrProfs}=await sb.from('profiles').select('id').eq('tenant_id',currentTenant.id).in('role',['admin','hr']);
+  for(const h of (hrProfs||[])){ await sendNotification(h.id,'Bank Account Added',currentProfile.full_name+' added a new bank account. Please verify.','warning','payroll'); }
+  closeModal();showToast('✓ Bank account added. HR notified.');
+  await window.loadEmpPayroll();
+};
+
+window.openEditBankAccount = async function(accountId, empId){
+  const {data:a}=await sb.from('employee_bank_accounts').select('*').eq('id',accountId).single();
+  if(!a) return;
+  showModal(`
+  <div class="modal-header"><h3>Edit Bank Account</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    <div style="background:var(--amber-light);border-radius:8px;padding:10px 12px;font-size:0.79rem;color:var(--amber);margin-bottom:14px">⚠️ HR will be notified when you update bank details.</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Bank Name *</label><input id="eb-bank" value="${a.bank_name||''}"></div>
+      <div class="form-group"><label>Nickname</label><input id="eb-nickname" value="${a.nickname||''}"></div>
+      <div class="form-group"><label>Account Type</label><select id="eb-accttype"><option value="">Select...</option><option ${a.account_type==='Checking'?'selected':''}>Checking</option><option ${a.account_type==='Savings'?'selected':''}>Savings</option></select></div>
+      <div class="form-group"><label>Account Number *</label><input id="eb-acctnum" value="${a.account_number||''}"></div>
+      <div class="form-group"><label>Routing Number *</label><input id="eb-routing" value="${a.routing_number||''}"></div>
+      <div class="form-group"><label>Pay Split %</label><input type="number" id="eb-split" value="${a.pay_split_percentage||100}" min="1" max="100"></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;margin-top:4px;cursor:pointer"><input type="checkbox" id="eb-primary" ${a.is_primary?'checked':''} style="accent-color:var(--accent)"> Set as primary account</label>
     <div id="eb-err" style="display:none;background:var(--red-light);border-radius:8px;padding:9px 12px;font-size:0.79rem;color:var(--red);margin-top:9px"></div>
   </div>
   <div class="modal-footer">
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-    <button class="btn btn-primary" onclick="window.saveEmpBankDetails('${empId}')">Save Bank Details</button>
+    <button class="btn btn-primary" onclick="window.updateBankAccount('${accountId}','${empId}')">Save Changes</button>
   </div>`);
 };
 
-window.saveEmpBankDetails = async function(empId){
+window.updateBankAccount = async function(accountId, empId){
   const errEl=document.getElementById('eb-err');
-  const {error}=await sb.from('payroll').update({
-    bank_name:document.getElementById('eb-bank').value.trim()||null,
+  const {error}=await sb.from('employee_bank_accounts').update({
+    bank_name:document.getElementById('eb-bank').value.trim(),
+    nickname:document.getElementById('eb-nickname').value.trim()||null,
     account_type:document.getElementById('eb-accttype').value||null,
-    account_number:document.getElementById('eb-acctnum').value.trim()||null,
-    routing_number:document.getElementById('eb-routing').value.trim()||null,
-  }).eq('employee_id',empId);
+    account_number:document.getElementById('eb-acctnum').value.trim(),
+    routing_number:document.getElementById('eb-routing').value.trim(),
+    pay_split_percentage:parseFloat(document.getElementById('eb-split').value)||100,
+    is_primary:document.getElementById('eb-primary').checked
+  }).eq('id',accountId);
   if(error){errEl.textContent=error.message;errEl.style.display='block';return;}
-  // Notify HR about bank detail change
   const {data:hrProfs}=await sb.from('profiles').select('id').eq('tenant_id',currentTenant.id).in('role',['admin','hr']);
-  for(const h of (hrProfs||[])){ await sendNotification(h.id,'Bank Details Updated',currentProfile.full_name+' has updated their bank details. Please verify.','warning','payroll'); }
-  closeModal();showToast('✓ Bank details updated. HR has been notified.');
+  for(const h of (hrProfs||[])){ await sendNotification(h.id,'Bank Details Updated',currentProfile.full_name+' updated their bank details. Please verify.','warning','payroll'); }
+  closeModal();showToast('✓ Bank account updated. HR notified.');
+  await window.loadEmpPayroll();
+};
+
+window.deleteBankAccount = async function(accountId, empId){
+  if(!confirm('Delete this bank account?')) return;
+  await sb.from('employee_bank_accounts').delete().eq('id',accountId);
+  showToast('Bank account deleted.');
   await window.loadEmpPayroll();
 };
 
