@@ -1569,6 +1569,99 @@ window.markAllEmpRead = async function(){
   await window.loadEmpNotifications();
 };
 
+
+// ════════════════════════════════════════════════════════════
+// ONBOARDING CHECKLIST
+// ════════════════════════════════════════════════════════════
+const ONBOARDING_ITEMS = [
+  'Complete your profile setup',
+  'Upload a government-issued ID document',
+  'Upload work authorization (visa/permit)',
+  'Set your emergency contact',
+  'Submit your first self-review',
+  'Review and acknowledge company handbook'
+];
+
+async function createOnboardingChecklist(employeeId){
+  const items = ONBOARDING_ITEMS.map(item=>({
+    tenant_id: tid(),
+    employee_id: employeeId,
+    item,
+    is_complete: false
+  }));
+  await sb.from('onboarding_checklist').insert(items);
+}
+
+window.loadEmpChecklist = async function(){
+  const el = document.getElementById('emp-checklist');
+  if(!el) return;
+  const {data:empRec}=await sb.from('employees').select('id').eq('profile_id',currentUser.id).maybeSingle();
+  if(!empRec) return;
+
+  let {data:items}=await sb.from('onboarding_checklist').select('*').eq('employee_id',empRec.id).order('created_at');
+
+  // Auto-create checklist if it doesn't exist
+  if(!items||items.length===0){
+    await createOnboardingChecklist(empRec.id);
+    const {data:newItems}=await sb.from('onboarding_checklist').select('*').eq('employee_id',empRec.id).order('created_at');
+    items=newItems||[];
+  }
+
+  const completed=items.filter(i=>i.is_complete).length;
+  const total=items.length;
+  const pct=Math.round(completed/total*100);
+
+  const countEl=document.getElementById('emp-checklist-count');
+  if(countEl) countEl.textContent=completed+'/'+total+' completed';
+
+  el.innerHTML=`
+    <div style="background:var(--surface-2);border-radius:8px;height:8px;margin-bottom:12px;overflow:hidden">
+      <div style="background:var(--accent);height:100%;width:${pct}%;border-radius:8px;transition:width 0.5s ease"></div>
+    </div>
+    ${items.map(item=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+      <input type="checkbox" ${item.is_complete?'checked':''} onchange="window.toggleChecklistItem('${item.id}',this.checked)" style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer">
+      <span style="font-size:0.83rem;${item.is_complete?'text-decoration:line-through;color:var(--ink-3)':''}">${item.item}</span>
+      ${item.is_complete&&item.completed_at?`<span style="font-size:0.68rem;color:var(--ink-3);margin-left:auto">${new Date(item.completed_at).toLocaleDateString()}</span>`:''}
+    </div>`).join('')}
+  `;
+};
+
+window.toggleChecklistItem = async function(id, checked){
+  await sb.from('onboarding_checklist').update({
+    is_complete: checked,
+    completed_at: checked ? new Date().toISOString() : null
+  }).eq('id', id);
+  await window.loadEmpChecklist();
+};
+
+window.loadEmployeeChecklist = async function(employeeId){
+  const el = document.getElementById('admin-checklist');
+  if(!el) return;
+  let {data:items}=await sb.from('onboarding_checklist').select('*').eq('employee_id',employeeId).order('created_at');
+  if(!items||items.length===0){
+    await createOnboardingChecklist(employeeId);
+    const {data:newItems}=await sb.from('onboarding_checklist').select('*').eq('employee_id',employeeId).order('created_at');
+    items=newItems||[];
+  }
+  const completed=items.filter(i=>i.is_complete).length;
+  const total=items.length;
+  const pct=Math.round(completed/total*100);
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <div style="flex:1;background:var(--surface-2);border-radius:8px;height:6px;overflow:hidden">
+        <div style="background:${pct===100?'var(--accent)':'var(--blue)'};height:100%;width:${pct}%;border-radius:8px"></div>
+      </div>
+      <span style="font-size:0.75rem;font-weight:600;color:var(--ink-3)">${completed}/${total}</span>
+    </div>
+    ${items.map(i=>`<div style="display:flex;align-items:center;gap:7px;padding:5px 0;font-size:0.78rem">
+      <span style="color:${i.is_complete?'var(--accent)':'var(--ink-3)'}">
+        ${i.is_complete?'✅':'⬜'}
+      </span>
+      <span style="${i.is_complete?'color:var(--ink-3);text-decoration:line-through':''}">${i.item}</span>
+    </div>`).join('')}
+  `;
+};
+
 async function platformNav(page){
   document.querySelectorAll('[id^="pnav-"]').forEach(e=>e.classList.remove('active'));
   document.getElementById('pnav-'+page)?.classList.add('active');
@@ -1997,6 +2090,10 @@ async function viewEmployee(empId){
       <div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px">Documents</div>
       <div id="admin-modal-doc-list"><div style="font-size:0.78rem;color:var(--ink-3)">Loading...</div></div>
     </div>
+    <div style="background:var(--surface-2);border-radius:9px;padding:11px;margin-top:9px">
+      <div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px">Onboarding Progress</div>
+      <div id="admin-checklist"><div style="font-size:0.78rem;color:var(--ink-3)">Loading...</div></div>
+    </div>
   </div>
   <div class="modal-footer">
     ${(isAdmin()||(isHR()&&e.role!=='admin'))?`<button class="btn btn-ghost btn-sm" style="color:var(--red);margin-right:auto" onclick="deleteEmployee('${e.user_id}')">Delete</button>`:''}
@@ -2004,7 +2101,10 @@ async function viewEmployee(empId){
     ${isAdminOrHR()?`<button class="btn btn-primary" onclick="editEmployee('${empId}')">Edit</button>`:''}
   </div>`);
   // Load documents for this employee after modal renders
-  setTimeout(()=>window.loadEmployeeDocsForAdmin('admin-modal-doc-list', `${e.employee_id}`), 100);
+  setTimeout(()=>{
+    window.loadEmployeeDocsForAdmin('admin-modal-doc-list', `${e.employee_id}`);
+    window.loadEmployeeChecklist(`${e.employee_id}`);
+  }, 100);
 }
 
 // ── Edit Employee ──────────────────────────────────────────
@@ -2527,6 +2627,16 @@ async function renderEmployeeDashboard(){
     </div>
 
     <div class="card card-padded" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div>
+          <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3)">Onboarding Checklist</div>
+          <div style="font-size:0.75rem;color:var(--ink-3);margin-top:2px" id="emp-checklist-count">Loading...</div>
+        </div>
+      </div>
+      <div id="emp-checklist"><div style="text-align:center;padding:16px;color:var(--ink-3);font-size:0.81rem">Loading...</div></div>
+    </div>
+
+    <div class="card card-padded" style="margin-bottom:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div>
           <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3)">Documents</div>
@@ -2569,6 +2679,7 @@ async function renderEmployeeDashboard(){
   </div>`;
   // Load all employee sections after dashboard renders
   setTimeout(async()=>{
+    await window.loadEmpChecklist();
     await window.loadEmpDocuments();
     await window.loadEmpLeaves();
     await window.loadEmpTimesheets();
