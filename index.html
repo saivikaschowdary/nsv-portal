@@ -1640,6 +1640,7 @@ async function navigate(page){
   else if(page==='leaves')     el.innerHTML=await rLeaves();
   else if(page==='users')     el.innerHTML=await rUsers();
   else if(page==='settings'){ el.innerHTML=await rSettings(); setTimeout(async()=>{ await window.loadDeptList(); }, 50); }
+  else if(page==='audit')     el.innerHTML=await rAuditLog();
 }
 
 // ── Helpers ────────────────────────────────────────────────
