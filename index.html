@@ -1869,7 +1869,10 @@ async function rPayroll(){
             <td>${p?.pay_frequency||'—'}</td>
             <td style="color:var(--ink-3)">${p?.effective_date||'—'}</td>
             <td>${sBadge(e.status||'Active')}</td>
-            <td><button class="btn btn-ghost btn-sm" onclick="window.openPayrollEdit('${e.employee_id}','${e.full_name}')">Edit</button></td>
+            <td style="display:flex;gap:6px">
+              <button class="btn btn-ghost btn-sm" onclick="window.openPayrollEdit('${e.employee_id}','${e.full_name}')">Edit</button>
+              <button class="btn btn-ghost btn-sm" onclick="window.openAdminBankView('${e.employee_id}','${e.full_name}')">🏦 Bank</button>
+            </td>
           </tr>`;
         }).join('')}
         </tbody>
@@ -2085,6 +2088,128 @@ window.deleteBankAccount = async function(accountId, empId){
   await sb.from('employee_bank_accounts').delete().eq('id',accountId);
   showToast('Bank account deleted.');
   await window.loadEmpPayroll();
+};
+
+
+window.openAdminBankView = async function(employeeId, empName){
+  const {data:accounts}=await sb.from('employee_bank_accounts').select('*').eq('employee_id',employeeId).order('is_primary',{ascending:false});
+  const list=accounts||[];
+  const totalPct=list.reduce((s,a)=>s+(a.pay_split_percentage||0),0);
+
+  showModal(`
+  <div class="modal-header"><h3>Bank Accounts — ${empName}</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    ${list.length===0?'<div style="text-align:center;padding:20px;color:var(--ink-3)">No bank accounts on file.</div>':`
+    <div style="background:${totalPct===100?'var(--accent-light)':'var(--red-light)'};border-radius:8px;padding:9px 12px;font-size:0.79rem;color:${totalPct===100?'var(--accent)':'var(--red)'};margin-bottom:12px">
+      Total pay split: ${totalPct}% ${totalPct===100?'✓ Balanced':'⚠️ Must equal 100%'}
+    </div>
+    ${list.map(a=>`<div style="border:1px solid var(--border);border-radius:9px;padding:12px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-weight:600">${a.bank_name}${a.nickname?' ('+a.nickname+')':''}${a.is_primary?' <span class="badge badge-green" style="font-size:0.65rem">Primary</span>':''}</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="window.adminEditBankAccount('${a.id}','${employeeId}','${empName}')">Edit</button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="window.adminDeleteBankAccount('${a.id}','${employeeId}','${empName}')">Delete</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;font-size:0.8rem">
+        <div><span style="color:var(--ink-3)">Account Type: </span>${a.account_type||'—'}</div>
+        <div><span style="color:var(--ink-3)">Pay Split: </span><strong style="color:var(--accent)">${a.pay_split_percentage}%</strong></div>
+        <div><span style="color:var(--ink-3)">Account #: </span>${a.account_number||'—'}</div>
+        <div><span style="color:var(--ink-3)">Routing #: </span>${a.routing_number||'—'}</div>
+      </div>
+    </div>`).join('')}`}
+    <button class="btn btn-primary btn-sm" onclick="window.adminAddBankAccount('${employeeId}','${empName}')" style="margin-top:8px">+ Add Bank Account</button>
+  </div>
+  <div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">Close</button></div>`);
+};
+
+window.adminAddBankAccount = function(employeeId, empName){
+  showModal(`
+  <div class="modal-header"><h3>Add Bank Account — ${empName}</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    <div class="form-grid">
+      <div class="form-group"><label>Bank Name *</label><input id="ab-bank" placeholder="e.g. Chase"></div>
+      <div class="form-group"><label>Nickname</label><input id="ab-nickname" placeholder="e.g. Savings"></div>
+      <div class="form-group"><label>Account Type</label><select id="ab-accttype"><option value="">Select...</option><option>Checking</option><option>Savings</option></select></div>
+      <div class="form-group"><label>Account Number *</label><input id="ab-acctnum"></div>
+      <div class="form-group"><label>Routing Number *</label><input id="ab-routing"></div>
+      <div class="form-group"><label>Pay Split % *</label><input type="number" id="ab-split" value="100" min="1" max="100"></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;margin-top:4px;cursor:pointer"><input type="checkbox" id="ab-primary" style="accent-color:var(--accent)"> Primary account</label>
+    <div id="ab-err" style="display:none;background:var(--red-light);border-radius:8px;padding:9px 12px;font-size:0.79rem;color:var(--red);margin-top:9px"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="window.openAdminBankView('${employeeId}','${empName}')">← Back</button>
+    <button class="btn btn-primary" onclick="window.saveAdminBankAccount('${employeeId}','${empName}')">Add Account</button>
+  </div>`);
+};
+
+window.saveAdminBankAccount = async function(employeeId, empName){
+  const errEl=document.getElementById('ab-err');
+  const bank=document.getElementById('ab-bank').value.trim();
+  const acct=document.getElementById('ab-acctnum').value.trim();
+  const routing=document.getElementById('ab-routing').value.trim();
+  const split=parseFloat(document.getElementById('ab-split').value)||0;
+  if(!bank||!acct||!routing||!split){errEl.textContent='Required fields missing.';errEl.style.display='block';return;}
+  const {error}=await sb.from('employee_bank_accounts').insert({
+    tenant_id:tid(), employee_id:employeeId,
+    bank_name:bank, nickname:document.getElementById('ab-nickname').value.trim()||null,
+    account_type:document.getElementById('ab-accttype').value||null,
+    account_number:acct, routing_number:routing,
+    pay_split_percentage:split, is_primary:document.getElementById('ab-primary').checked
+  });
+  if(error){errEl.textContent=error.message;errEl.style.display='block';return;}
+  await logAudit('ADD bank account for '+empName,'employee_bank_accounts',employeeId);
+  closeModal();showToast('✓ Bank account added.');
+  await window.openAdminBankView(employeeId, empName);
+};
+
+window.adminEditBankAccount = async function(accountId, employeeId, empName){
+  const {data:a}=await sb.from('employee_bank_accounts').select('*').eq('id',accountId).single();
+  if(!a) return;
+  showModal(`
+  <div class="modal-header"><h3>Edit Bank Account — ${empName}</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    <div class="form-grid">
+      <div class="form-group"><label>Bank Name</label><input id="aeb-bank" value="${a.bank_name||''}"></div>
+      <div class="form-group"><label>Nickname</label><input id="aeb-nickname" value="${a.nickname||''}"></div>
+      <div class="form-group"><label>Account Type</label><select id="aeb-accttype"><option value="">Select...</option><option ${a.account_type==='Checking'?'selected':''}>Checking</option><option ${a.account_type==='Savings'?'selected':''}>Savings</option></select></div>
+      <div class="form-group"><label>Account Number</label><input id="aeb-acctnum" value="${a.account_number||''}"></div>
+      <div class="form-group"><label>Routing Number</label><input id="aeb-routing" value="${a.routing_number||''}"></div>
+      <div class="form-group"><label>Pay Split %</label><input type="number" id="aeb-split" value="${a.pay_split_percentage||100}" min="1" max="100"></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;margin-top:4px;cursor:pointer"><input type="checkbox" id="aeb-primary" ${a.is_primary?'checked':''} style="accent-color:var(--accent)"> Primary account</label>
+    <div id="aeb-err" style="display:none;background:var(--red-light);border-radius:8px;padding:9px 12px;font-size:0.79rem;color:var(--red);margin-top:9px"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="window.openAdminBankView('${employeeId}','${empName}')">← Back</button>
+    <button class="btn btn-primary" onclick="window.saveAdminEditBank('${accountId}','${employeeId}','${empName}')">Save</button>
+  </div>`);
+};
+
+window.saveAdminEditBank = async function(accountId, employeeId, empName){
+  const errEl=document.getElementById('aeb-err');
+  const {error}=await sb.from('employee_bank_accounts').update({
+    bank_name:document.getElementById('aeb-bank').value.trim(),
+    nickname:document.getElementById('aeb-nickname').value.trim()||null,
+    account_type:document.getElementById('aeb-accttype').value||null,
+    account_number:document.getElementById('aeb-acctnum').value.trim(),
+    routing_number:document.getElementById('aeb-routing').value.trim(),
+    pay_split_percentage:parseFloat(document.getElementById('aeb-split').value)||100,
+    is_primary:document.getElementById('aeb-primary').checked
+  }).eq('id',accountId);
+  if(error){errEl.textContent=error.message;errEl.style.display='block';return;}
+  await logAudit('EDIT bank account for '+empName,'employee_bank_accounts',employeeId);
+  closeModal();showToast('✓ Bank account updated.');
+  await window.openAdminBankView(employeeId, empName);
+};
+
+window.adminDeleteBankAccount = async function(accountId, employeeId, empName){
+  if(!confirm('Delete this bank account?')) return;
+  await sb.from('employee_bank_accounts').delete().eq('id',accountId);
+  await logAudit('DELETE bank account for '+empName,'employee_bank_accounts',employeeId);
+  showToast('Bank account deleted.');
+  await window.openAdminBankView(employeeId, empName);
 };
 
 async function platformNav(page){
