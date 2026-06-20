@@ -2587,15 +2587,32 @@ async function rDash(){
     const marginPct = totalRevenue>0 ? ((netMargin/totalRevenue)*100).toFixed(1) : 0;
 
     financialHTML = `
-    <div style="margin-bottom:20px">
-      <div style="font-size:0.95rem;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px">💰 Company Financial Overview</div>
-      <div class="metric-grid">
-        <div class="metric-card mc-green"><div class="metric-label">Total Revenue</div><div class="metric-val">$${totalRevenue.toLocaleString(undefined,{maximumFractionDigits:0})}</div><div class="metric-sub">From approved timesheets</div></div>
-        <div class="metric-card mc-blue"><div class="metric-label">Total Payroll Cost</div><div class="metric-val cv-blue">$${totalCost.toLocaleString(undefined,{maximumFractionDigits:0})}</div><div class="metric-sub">Hourly billed employees</div></div>
-        <div class="metric-card ${netMargin>=0?'mc-green':'mc-red'}"><div class="metric-label">Net Margin</div><div class="metric-val" style="color:${netMargin>=0?'var(--accent)':'var(--red)'}">$${netMargin.toLocaleString(undefined,{maximumFractionDigits:0})}</div><div class="metric-sub">${marginPct}% margin</div></div>
-        <div class="metric-card mc-amber"><div class="metric-label">Bench Cost (Monthly Est.)</div><div class="metric-val cv-amber">$${benchCost.toLocaleString(undefined,{maximumFractionDigits:0})}</div><div class="metric-sub">${benchIds.size} on bench</div></div>
+    <div style="margin-bottom:24px;background:linear-gradient(135deg,var(--ink) 0%,#2a3441 100%);border-radius:16px;padding:18px 20px">
+      <div style="font-size:0.95rem;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:7px;color:#fff">💰 Company Financial Overview</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        <div style="background:rgba(255,255,255,0.08);border-radius:12px;padding:14px 16px;border:1px solid rgba(255,255,255,0.1)">
+          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:rgba(255,255,255,0.6);margin-bottom:6px">Total Revenue</div>
+          <div style="font-size:1.5rem;font-weight:700;color:#fff">$${totalRevenue.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+          <div style="font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:2px">From approved timesheets</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.08);border-radius:12px;padding:14px 16px;border:1px solid rgba(255,255,255,0.1)">
+          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:rgba(255,255,255,0.6);margin-bottom:6px">Total Payroll Cost</div>
+          <div style="font-size:1.5rem;font-weight:700;color:#fff">$${totalCost.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+          <div style="font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:2px">Hourly billed employees</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.08);border-radius:12px;padding:14px 16px;border:1px solid rgba(255,255,255,0.1)">
+          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:rgba(255,255,255,0.6);margin-bottom:6px">Net Margin</div>
+          <div style="font-size:1.5rem;font-weight:700;color:${netMargin>=0?'#4ade80':'#f87171'}">$${netMargin.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+          <div style="font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:2px">${marginPct}% margin</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.08);border-radius:12px;padding:14px 16px;border:1px solid rgba(255,255,255,0.1)">
+          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:rgba(255,255,255,0.6);margin-bottom:6px">Bench Cost (Monthly Est.)</div>
+          <div style="font-size:1.5rem;font-weight:700;color:#fbbf24">$${benchCost.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+          <div style="font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:2px">${benchIds.size} on bench</div>
+        </div>
       </div>
-    </div>`;
+    </div>
+    <div style="font-size:0.95rem;font-weight:600;margin-bottom:10px;color:var(--ink)">📊 Operations</div>`;
   }
   const emps=er.data||[], today=new Date();
   const total=emps.length, bench=emps.filter(e=>e.status==='Bench').length, active=emps.filter(e=>e.status==='Active').length;
