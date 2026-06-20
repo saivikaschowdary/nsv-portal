@@ -2912,7 +2912,7 @@ async function rEmployees(){
 async function viewEmployee(empId){
   const { data:e } = await sb.from('v_employee_profile').select('*').eq('employee_id',empId).single();
   if(!e) return;
-  const {data:empLeavesForView}=await sb.from('leave_requests').select('leave_type,total_days,status').eq('employee_id',empId);
+  const {data:empLeavesForView}=await sb.from('leave_requests').select('leave_type,total_days,status,start_date').eq('employee_id',empId);
   const _curYearV=new Date().getFullYear();
   const usedAnnual=(empLeavesForView||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Annual'&&l.start_date&&new Date(l.start_date).getFullYear()===_curYearV).reduce((s,l)=>s+(l.total_days||0),0);
   const usedSick=(empLeavesForView||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Sick'&&l.start_date&&new Date(l.start_date).getFullYear()===_curYearV).reduce((s,l)=>s+(l.total_days||0),0);
