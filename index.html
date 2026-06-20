@@ -2775,7 +2775,7 @@ async function rDash(){
   // Status breakdown
   const statusData=[{label:'Active',val:active,color:'var(--accent)'},{label:'Bench',val:bench,color:'var(--blue)'},{label:'Inactive',val:emps.filter(e=>e.status==='Inactive').length,color:'var(--ink-3)'}];
 
-  return`<div class="page-header"><div><h2>Overview</h2><p>${currentTenant?.name||''} · <span class="realtime-dot"></span>Live</p></div><button class="btn btn-primary btn-sm" onclick="openAddEmployee()">+ Add Employee</button></div>
+  return`<div class="page-header"><div><h2>Overview</h2><p>${currentTenant?.name||''} · <span class="realtime-dot"></span>Live</p></div></div>
   <div class="page-body">
     ${financialHTML}
     <div class="metric-grid">
@@ -2871,7 +2871,7 @@ async function rEmployees(){
   const depts=[...new Set(list.map(e=>e.department_name).filter(Boolean))].sort();
   const allDepts=await sb.from('departments').select('id,name').eq('tenant_id',tid()).order('name');
   const deptOpts=(allDepts.data||[]).map(d=>'<option value="'+d.id+'">'+d.name+'</option>').join('');
-  return`<div class="page-header"><div><h2>Employees</h2><p>${list.length} total</p></div><button class="btn btn-primary btn-sm" onclick="openAddEmployee()">+ Add Employee</button></div>
+  return`<div class="page-header"><div><h2>Employees</h2><p>${list.length} total</p></div></div>
   <div class="page-body">
     <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
       <input id="emp-search" placeholder="Search by name, email, title..." style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;font-family:'DM Sans',sans-serif" oninput="filterEmployeeTable()">
