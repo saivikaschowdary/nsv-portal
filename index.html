@@ -3597,8 +3597,7 @@ window.saveMyProfile = async function(){
     lca_duties: document.getElementById('ep-lca').value.trim(),
     emergency_name: document.getElementById('ep-ename').value.trim(),
     emergency_rel: document.getElementById('ep-erel').value.trim(),
-    emergency_phone: document.getElementById('ep-ephone').value.trim(),
-    profile_complete: true
+    emergency_phone: document.getElementById('ep-ephone').value.trim()
   }).eq('id', empRec.id);
   if(error){ errEl.textContent=error.message; errEl.style.display='block'; return; }
   await sb.from('profiles').update({ profile_complete: true }).eq('id', currentUser.id);
