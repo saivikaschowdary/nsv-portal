@@ -328,6 +328,7 @@ tr:hover td{background:var(--surface)}
         <div class="nav-item" onclick="navigate('timesheets')" id="side-timesheets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Timesheets</div>
         <div class="nav-item" onclick="navigate('leaves')" id="side-leaves"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Leave</div>
         <div class="nav-item" onclick="navigate('payroll')" id="side-payroll" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Payroll</div>
+        <div class="nav-item" onclick="navigate('messages')" id="side-messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>Messages<span id="msg-unread-badge" style="display:none;background:var(--red);color:#fff;font-size:0.62rem;font-weight:700;border-radius:50%;width:16px;height:16px;align-items:center;justify-content:center;margin-left:auto">0</span></div>
         <div class="nav-item" onclick="navigate('users')" id="side-users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>Manage Users</div>
         <div class="nav-item" onclick="navigate('audit')" id="side-audit" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Audit Log</div>
         <div class="nav-item" onclick="navigate('settings')" id="side-settings" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</div>
@@ -2414,6 +2415,103 @@ window.setDailyStatus = async function(status){
   showToast(status?'✓ Status updated':'Status cleared');
 };
 
+
+// ════════════════════════════════════════════════════════════
+// MESSAGING (Admin/HR/Manager only)
+// ════════════════════════════════════════════════════════════
+async function rMessages(){
+  const {data:staff}=await sb.from('profiles').select('id,full_name,email,role').eq('tenant_id',tid()).in('role',['admin','hr','manager']).neq('id',currentUser.id).order('full_name');
+  const contacts=staff||[];
+
+  const {data:allMsgs}=await sb.from('messages').select('*').eq('tenant_id',tid()).or(`sender_id.eq.${currentUser.id},recipient_id.eq.${currentUser.id}`).order('created_at',{ascending:false});
+  const msgs=allMsgs||[];
+
+  // Build last message + unread count per contact
+  const convoMap={};
+  msgs.forEach(m=>{
+    const otherId=m.sender_id===currentUser.id?m.recipient_id:m.sender_id;
+    if(!convoMap[otherId]) convoMap[otherId]={lastMsg:m,unread:0};
+    if(m.recipient_id===currentUser.id && !m.is_read) convoMap[otherId].unread++;
+  });
+
+  return`<div class="page-header"><div><h2>Messages</h2><p>Internal staff messaging</p></div></div>
+  <div class="page-body">
+    <div style="display:grid;grid-template-columns:280px 1fr;gap:14px;height:calc(100vh - 180px)">
+      <div class="card" style="overflow-y:auto">
+        ${contacts.length===0?'<div style="padding:20px;text-align:center;color:var(--ink-3);font-size:0.81rem">No other staff members yet.</div>':
+        contacts.map((c,i)=>{
+          const convo=convoMap[c.id];
+          const preview=convo?.lastMsg?.content?.slice(0,40)||'No messages yet';
+          return`<div onclick="window.openConversation('${c.id}','${c.full_name.replace(/'/g,"\\'")}')" id="contact-${c.id}" style="padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
+            ${mkAv(c.full_name,i,34)}
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:500;font-size:0.83rem">${c.full_name}</span>${convo?.unread?`<span style="background:var(--accent);color:#fff;font-size:0.62rem;font-weight:700;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center">${convo.unread}</span>`:''}</div>
+              <div style="font-size:0.73rem;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.role==='hr'?'HR':c.role.charAt(0).toUpperCase()+c.role.slice(1)} · ${preview}</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="card" id="conversation-panel" style="display:flex;flex-direction:column">
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--ink-3);font-size:0.85rem">Select a conversation to start messaging</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+window.openConversation = async function(contactId, contactName){
+  document.querySelectorAll('[id^="contact-"]').forEach(el=>el.style.background='');
+  const sel=document.getElementById('contact-'+contactId);
+  if(sel) sel.style.background='var(--accent-light)';
+
+  window._activeConvoId = contactId;
+  const panel=document.getElementById('conversation-panel');
+  panel.innerHTML=`
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-weight:600;font-size:0.88rem">${contactName}</div>
+    <div id="msg-thread" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px"><div class="loading-pulse" style="text-align:center;color:var(--ink-3);font-size:0.81rem">Loading…</div></div>
+    <div style="padding:12px;border-top:1px solid var(--border);display:flex;gap:8px">
+      <input id="msg-input" placeholder="Type a message..." style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.84rem;font-family:'DM Sans',sans-serif" onkeydown="if(event.key==='Enter')window.sendMessage('${contactId}')">
+      <button class="btn btn-primary btn-sm" onclick="window.sendMessage('${contactId}')">Send</button>
+    </div>
+  `;
+  await window.loadMessageThread(contactId);
+  // Mark messages from this contact as read
+  await sb.from('messages').update({is_read:true}).eq('sender_id',contactId).eq('recipient_id',currentUser.id).eq('is_read',false);
+  await window.updateUnreadMsgBadge();
+};
+
+window.loadMessageThread = async function(contactId){
+  const {data:thread}=await sb.from('messages').select('*').eq('tenant_id',tid()).or(`and(sender_id.eq.${currentUser.id},recipient_id.eq.${contactId}),and(sender_id.eq.${contactId},recipient_id.eq.${currentUser.id})`).order('created_at',{ascending:true});
+  const list=thread||[];
+  const el=document.getElementById('msg-thread');
+  if(!el) return;
+  if(list.length===0){ el.innerHTML='<div style="text-align:center;color:var(--ink-3);font-size:0.81rem;margin:auto">No messages yet. Say hello!</div>'; return; }
+  el.innerHTML=list.map(m=>{
+    const mine=m.sender_id===currentUser.id;
+    return`<div style="align-self:${mine?'flex-end':'flex-start'};max-width:70%">
+      <div style="background:${mine?'var(--accent)':'var(--surface-2)'};color:${mine?'#fff':'var(--ink)'};padding:8px 12px;border-radius:${mine?'12px 12px 2px 12px':'12px 12px 12px 2px'};font-size:0.84rem">${m.content}</div>
+      <div style="font-size:0.65rem;color:var(--ink-3);margin-top:2px;text-align:${mine?'right':'left'}">${new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+    </div>`;
+  }).join('');
+  el.scrollTop=el.scrollHeight;
+};
+
+window.sendMessage = async function(contactId){
+  const input=document.getElementById('msg-input');
+  const content=input.value.trim();
+  if(!content) return;
+  input.value='';
+  const {error}=await sb.from('messages').insert({tenant_id:tid(),sender_id:currentUser.id,recipient_id:contactId,content});
+  if(error){ showToast('Error sending message: '+error.message); return; }
+  await window.loadMessageThread(contactId);
+};
+
+window.updateUnreadMsgBadge = async function(){
+  const {data:unread}=await sb.from('messages').select('id').eq('recipient_id',currentUser.id).eq('is_read',false).eq('tenant_id',tid());
+  const count=(unread||[]).length;
+  const badge=document.getElementById('msg-unread-badge');
+  if(badge){ badge.textContent=count>9?'9+':count; badge.style.display=count>0?'flex':'none'; }
+};
+
 async function platformNav(page){
   document.querySelectorAll('[id^="pnav-"]').forEach(e=>e.classList.remove('active'));
   document.getElementById('pnav-'+page)?.classList.add('active');
@@ -2640,6 +2738,15 @@ function loadHRDashboard(){
   // Poll for new notifications every 30 seconds
   if(window._notifPollTimer) clearInterval(window._notifPollTimer);
   window._notifPollTimer = setInterval(loadNotifications, 30000);
+  // Poll for unread messages
+  if(['admin','hr','manager'].includes(p?.role)){
+    window.updateUnreadMsgBadge();
+    if(window._msgPollTimer) clearInterval(window._msgPollTimer);
+    window._msgPollTimer = setInterval(()=>{
+      window.updateUnreadMsgBadge();
+      if(currentPage==='messages' && window._activeConvoId) window.loadMessageThread(window._activeConvoId);
+    }, 15000);
+  }
 }
 
 
@@ -2661,6 +2768,7 @@ async function navigate(page){
   else if(page==='timesheets') el.innerHTML=await rTimesheets();
   else if(page==='leaves')     el.innerHTML=await rLeaves();
   else if(page==='users')     el.innerHTML=await rUsers();
+  else if(page==='messages')  el.innerHTML=await rMessages();
   else if(page==='payroll')   el.innerHTML=await rPayroll();
   else if(page==='settings'){ el.innerHTML=await rSettings(); setTimeout(async()=>{ await window.loadDeptList(); }, 50); }
   else if(page==='audit')     el.innerHTML=await rAuditLog();
