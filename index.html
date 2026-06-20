@@ -277,8 +277,8 @@ tr:hover td{background:var(--surface)}
       <div style="position:relative">
         <button class="btn btn-white btn-sm" onclick="document.getElementById('portal-switch-dropdown').style.display=document.getElementById('portal-switch-dropdown').style.display==='none'?'block':'none'">View Portals ▾</button>
         <div id="portal-switch-dropdown" style="display:none;position:absolute;top:36px;left:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);min-width:160px;z-index:998;overflow:hidden">
-          <div onclick="goToPortal('manager');document.getElementById('portal-switch-dropdown').style.display='none'" style="padding:10px 14px;font-size:0.81rem;cursor:pointer;color:var(--ink)" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">Manager Portal</div>
-          <div onclick="goToPortal('employee');document.getElementById('portal-switch-dropdown').style.display='none'" style="padding:10px 14px;font-size:0.81rem;cursor:pointer;color:var(--ink);border-top:1px solid var(--border)" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">Employee Portal</div>
+          <div onclick="window.open(window.location.pathname+window.location.search+(window.location.search?'&':'?')+'portal=manager','_blank');document.getElementById('portal-switch-dropdown').style.display='none'" style="padding:10px 14px;font-size:0.81rem;cursor:pointer;color:var(--ink)" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">Manager Portal ↗</div>
+          <div onclick="window.open(window.location.pathname+window.location.search+(window.location.search?'&':'?')+'portal=employee','_blank');document.getElementById('portal-switch-dropdown').style.display='none'" style="padding:10px 14px;font-size:0.81rem;cursor:pointer;color:var(--ink);border-top:1px solid var(--border)" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">Employee Portal ↗</div>
         </div>
       </div>
       <div style="position:relative" id="notif-bell" onclick="window.toggleNotifications()">
@@ -425,6 +425,10 @@ async function init(){
       if(setupName) setupName.textContent = tenant.name;
     }
   }
+
+  const portalParam = params.get('portal');
+  if(portalParam==='manager'){ showScreen('screen-manager'); return; }
+  if(portalParam==='employee'){ goToPortal('employee'); return; }
 
   const { data:{ session } } = await sb.auth.getSession();
   if(session) await loadUserContext(session.user);
