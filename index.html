@@ -2282,6 +2282,47 @@ window.openRevenueView = async function(employeeId, empName){
   <div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">Close</button></div>`);
 };
 
+
+async function showFinancialPopup(type){
+  const fd = window._financialData;
+  if(!fd){ showToast('Financial data not loaded yet.'); return; }
+  const {data:empProfiles}=await sb.from('v_employee_profile').select('employee_id,full_name').eq('tenant_id',tid());
+  const empMap={};(empProfiles||[]).forEach(e=>empMap[e.employee_id]=e.full_name);
+
+  let title='', html='';
+
+  if(type==='revenue'||type==='cost'||type==='margin'){
+    const rows = Object.keys(fd.hoursByEmp).map(empId=>{
+      const p = fd.payMap[empId];
+      const hours = fd.hoursByEmp[empId];
+      const payRate = p?.salary_type==='Hourly'?(p.amount||0):0;
+      const billRate = p?.billing_rate||0;
+      const rev = hours*billRate;
+      const cost = hours*payRate;
+      const margin = rev-cost;
+      return { name: empMap[empId]||'Unknown', hours, rev, cost, margin };
+    }).filter(r=>r.rev>0||r.cost>0).sort((a,b)=>b.rev-a.rev);
+
+    title = type==='revenue'?'Revenue Breakdown':type==='cost'?'Payroll Cost Breakdown':'Margin Breakdown';
+    html = rows.length===0?'<p style="color:var(--ink-3);text-align:center;padding:20px">No billing data available yet. Set billing/pay rates in Payroll.</p>':
+    `<table style="width:100%;border-collapse:collapse;font-size:0.81rem"><thead><tr style="border-bottom:1px solid var(--border)"><th style="padding:8px;text-align:left">Employee</th><th style="padding:8px;text-align:right">Hours</th><th style="padding:8px;text-align:right">Revenue</th><th style="padding:8px;text-align:right">Cost</th><th style="padding:8px;text-align:right">Margin</th></tr></thead><tbody>${rows.map(r=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px;font-weight:500">${r.name}</td><td style="padding:8px;text-align:right">${r.hours}h</td><td style="padding:8px;text-align:right;color:var(--accent)">$${r.rev.toLocaleString()}</td><td style="padding:8px;text-align:right">$${r.cost.toLocaleString()}</td><td style="padding:8px;text-align:right;font-weight:600;color:${r.margin>=0?'var(--accent)':'var(--red)'}">$${r.margin.toLocaleString()}</td></tr>`).join('')}</tbody></table>`;
+  }
+
+  else if(type==='bench'){
+    const benchEmps = fd.empStatusList.filter(e=>fd.benchIds.has(e.id));
+    const benchRows = benchEmps.map(e=>{
+      const p = fd.payMap[e.id];
+      const monthlyCost = (p?.salary_type==='Salary')?(p.amount||0)/12:0;
+      return { name: empMap[e.id]||'Unknown', monthlyCost, salaryType: p?.salary_type||'—' };
+    });
+    title = 'Bench Cost Breakdown';
+    html = benchRows.length===0?'<p style="color:var(--ink-3);text-align:center;padding:20px">No employees currently on bench. 🎉</p>':
+    `<table style="width:100%;border-collapse:collapse;font-size:0.81rem"><thead><tr style="border-bottom:1px solid var(--border)"><th style="padding:8px;text-align:left">Employee</th><th style="padding:8px;text-align:left">Salary Type</th><th style="padding:8px;text-align:right">Monthly Cost</th></tr></thead><tbody>${benchRows.map(r=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px;font-weight:500">${r.name}</td><td style="padding:8px;color:var(--ink-3)">${r.salaryType}</td><td style="padding:8px;text-align:right;color:var(--amber);font-weight:600">$${r.monthlyCost.toLocaleString(undefined,{maximumFractionDigits:0})}</td></tr>`).join('')}</tbody></table>`;
+  }
+
+  showModal(`<div class="modal-header"><h3>${title}</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">X</button></div><div class="modal-body" style="max-height:60vh;overflow-y:auto">${html}</div><div class="modal-footer"><button class="btn btn-primary" onclick="closeModal()">Close</button></div>`);
+}
+
 async function platformNav(page){
   document.querySelectorAll('[id^="pnav-"]').forEach(e=>e.classList.remove('active'));
   document.getElementById('pnav-'+page)?.classList.add('active');
@@ -2587,32 +2628,17 @@ async function rDash(){
     const marginPct = totalRevenue>0 ? ((netMargin/totalRevenue)*100).toFixed(1) : 0;
 
     financialHTML = `
-    <div style="margin-bottom:24px;background:linear-gradient(135deg,var(--ink) 0%,#2a3441 100%);border-radius:16px;padding:18px 20px">
-      <div style="font-size:0.95rem;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:7px;color:#fff">💰 Company Financial Overview</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
-        <div style="background:rgba(255,255,255,0.08);border-radius:12px;padding:14px 16px;border:1px solid rgba(255,255,255,0.1)">
-          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:rgba(255,255,255,0.6);margin-bottom:6px">Total Revenue</div>
-          <div style="font-size:1.5rem;font-weight:700;color:#fff">$${totalRevenue.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
-          <div style="font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:2px">From approved timesheets</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.08);border-radius:12px;padding:14px 16px;border:1px solid rgba(255,255,255,0.1)">
-          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:rgba(255,255,255,0.6);margin-bottom:6px">Total Payroll Cost</div>
-          <div style="font-size:1.5rem;font-weight:700;color:#fff">$${totalCost.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
-          <div style="font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:2px">Hourly billed employees</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.08);border-radius:12px;padding:14px 16px;border:1px solid rgba(255,255,255,0.1)">
-          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:rgba(255,255,255,0.6);margin-bottom:6px">Net Margin</div>
-          <div style="font-size:1.5rem;font-weight:700;color:${netMargin>=0?'#4ade80':'#f87171'}">$${netMargin.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
-          <div style="font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:2px">${marginPct}% margin</div>
-        </div>
-        <div style="background:rgba(255,255,255,0.08);border-radius:12px;padding:14px 16px;border:1px solid rgba(255,255,255,0.1)">
-          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:rgba(255,255,255,0.6);margin-bottom:6px">Bench Cost (Monthly Est.)</div>
-          <div style="font-size:1.5rem;font-weight:700;color:#fbbf24">$${benchCost.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
-          <div style="font-size:0.7rem;color:rgba(255,255,255,0.5);margin-top:2px">${benchIds.size} on bench</div>
-        </div>
+    <div style="margin-bottom:24px">
+      <div style="font-size:0.95rem;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:7px;color:var(--ink)">💰 Company Financial Overview</div>
+      <div class="metric-grid">
+        <div class="metric-card mc-green" style="cursor:pointer" onclick="showFinancialPopup('revenue')"><div class="metric-label">Total Revenue</div><div class="metric-val">$${totalRevenue.toLocaleString(undefined,{maximumFractionDigits:0})}</div><div class="metric-sub">Click for breakdown →</div></div>
+        <div class="metric-card mc-blue" style="cursor:pointer" onclick="showFinancialPopup('cost')"><div class="metric-label">Total Payroll Cost</div><div class="metric-val cv-blue">$${totalCost.toLocaleString(undefined,{maximumFractionDigits:0})}</div><div class="metric-sub">Click for breakdown →</div></div>
+        <div class="metric-card ${netMargin>=0?'mc-green':'mc-red'}" style="cursor:pointer" onclick="showFinancialPopup('margin')"><div class="metric-label">Net Margin</div><div class="metric-val" style="color:${netMargin>=0?'var(--accent)':'var(--red)'}">$${netMargin.toLocaleString(undefined,{maximumFractionDigits:0})}</div><div class="metric-sub">${marginPct}% margin · click for breakdown →</div></div>
+        <div class="metric-card mc-amber" style="cursor:pointer" onclick="showFinancialPopup('bench')"><div class="metric-label">Bench Cost (Monthly Est.)</div><div class="metric-val cv-amber">$${benchCost.toLocaleString(undefined,{maximumFractionDigits:0})}</div><div class="metric-sub">${benchIds.size} on bench · click for breakdown →</div></div>
       </div>
     </div>
     <div style="font-size:0.95rem;font-weight:600;margin-bottom:10px;color:var(--ink)">📊 Operations</div>`;
+    window._financialData = {payMap, hoursByEmp, benchIds, totalRevenue, totalCost, netMargin, benchCost, empStatusList};
   }
   const emps=er.data||[], today=new Date();
   const total=emps.length, bench=emps.filter(e=>e.status==='Bench').length, active=emps.filter(e=>e.status==='Active').length;
