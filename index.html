@@ -294,6 +294,13 @@ tr:hover td{background:var(--surface)}
         </div>
         <div id="notif-list"><div style="padding:20px;text-align:center;color:var(--ink-3);font-size:0.81rem"><span class="loading-pulse">Loading…</span></div></div>
       </div>
+      <div style="position:relative">
+        <button class="btn btn-ghost btn-sm" id="status-btn" onclick="document.getElementById('status-dropdown').style.display=document.getElementById('status-dropdown').style.display==='none'?'block':'none'" style="color:rgba(255,255,255,0.6);border-color:rgba(255,255,255,0.1)">📍 <span id="status-btn-label">Set Status</span></button>
+        <div id="status-dropdown" style="display:none;position:absolute;top:36px;right:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);min-width:190px;z-index:998;overflow:hidden">
+          ${[['🟢','In Office'],['🏠','Working Remotely'],['🚗','In Transit'],['🌴','On Leave'],['🤒','Out Sick'],['📅','In a Meeting']].map(([icon,label])=>`<div onclick="window.setDailyStatus('${icon} ${label}')" style="padding:9px 14px;font-size:0.81rem;cursor:pointer;color:var(--ink);display:flex;align-items:center;gap:7px" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''"><span>${icon}</span>${label}</div>`).join('')}
+          <div onclick="window.setDailyStatus(null)" style="padding:9px 14px;font-size:0.81rem;cursor:pointer;color:var(--ink-3);border-top:1px solid var(--border)" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">Clear status</div>
+        </div>
+      </div>
       <button class="btn btn-ghost btn-sm" onclick="window.openStaffProfile()" style="color:rgba(255,255,255,0.6);border-color:rgba(255,255,255,0.1)">My Profile</button>
       <button class="btn btn-ghost btn-sm" onclick="doSignOut()" style="color:rgba(255,255,255,0.4);border-color:rgba(255,255,255,0.1)">
         <span id="topnav-user">Admin</span> · Sign Out
@@ -1532,6 +1539,11 @@ document.addEventListener('click', function(e){
   if(portalDD && portalDD.style.display==='block' && !portalDD.contains(e.target) && (!portalBtn || !portalBtn.onclick?.toString().includes('portal-switch-dropdown'))){
     portalDD.style.display='none';
   }
+  const statusBtn=document.getElementById('status-btn');
+  const statusDD=document.getElementById('status-dropdown');
+  if(statusDD && statusDD.style.display==='block' && statusBtn && !statusBtn.contains(e.target) && !statusDD.contains(e.target)){
+    statusDD.style.display='none';
+  }
 });
 
 
@@ -2387,6 +2399,16 @@ window.saveStaffProfile = async function(){
   showToast('✓ Profile updated.');
 };
 
+
+window.setDailyStatus = async function(status){
+  await sb.from('profiles').update({daily_status:status,daily_status_updated_at:new Date().toISOString()}).eq('id',currentUser.id);
+  currentProfile.daily_status=status;
+  const label=document.getElementById('status-btn-label');
+  if(label) label.textContent=status?status.split(' ').slice(1).join(' '):'Set Status';
+  document.getElementById('status-dropdown').style.display='none';
+  showToast(status?'✓ Status updated':'Status cleared');
+};
+
 async function platformNav(page){
   document.querySelectorAll('[id^="pnav-"]').forEach(e=>e.classList.remove('active'));
   document.getElementById('pnav-'+page)?.classList.add('active');
@@ -2577,6 +2599,8 @@ function loadHRDashboard(){
   document.getElementById('topnav-company').textContent  = t?.name||'Company';
   document.getElementById('sidebar-company').textContent = t?.name||'Company';
   document.getElementById('topnav-user').textContent     = p?.full_name?.split(' ')[0]||'Admin';
+  const statusLabel=document.getElementById('status-btn-label');
+  if(statusLabel) statusLabel.textContent=p?.daily_status?p.daily_status.split(' ').slice(1).join(' '):'Set Status';
   const isAdm = p?.role==='admin';
   // Settings and Audit - admin only
   ['nav-settings','side-settings','nav-audit','side-audit'].forEach(id=>{
@@ -2892,7 +2916,7 @@ async function rDash(){
 
 // ── Team Overview ──────────────────────────────────────────
 async function rTeam(){
-  const { data } = await sb.from('profiles').select('id,full_name,email,role,is_active').eq('tenant_id',tid()).in('role',['manager','hr']).order('full_name');
+  const { data } = await sb.from('profiles').select('id,full_name,email,role,is_active,daily_status').eq('tenant_id',tid()).in('role',['manager','hr']).order('full_name');
   const list=data||[];
   return`<div class="page-header"><div><h2>Team Overview</h2><p>${list.length} member${list.length!==1?'s':''}</p></div></div>
   <div class="page-body"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(265px,1fr));gap:12px">
@@ -2901,6 +2925,7 @@ async function rTeam(){
         <div style="display:flex;align-items:center;gap:8px">${mkAv(e.full_name,i,36)}<div><div style="font-weight:500;font-size:0.86rem">${e.full_name}</div><div style="font-size:0.72rem;color:var(--ink-3)">${e.email}</div></div></div>
         <span class="badge ${e.role==='hr'?'badge-amber':'badge-blue'}">${e.role==='hr'?'HR':'Manager'}</span>
       </div>
+      ${e.daily_status?`<div style="font-size:0.76rem;background:var(--surface-2);border-radius:7px;padding:5px 9px;margin-bottom:8px;display:inline-block">${e.daily_status}</div>`:''}
       <div style="font-size:0.75rem;color:var(--ink-3);border-top:1px solid var(--border);padding-top:8px">
         <div>${e.is_active?'<span class="badge badge-green">Active</span>':'<span class="badge badge-gray">Inactive</span>'}</div>
       </div>
