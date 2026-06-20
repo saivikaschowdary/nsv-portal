@@ -2814,7 +2814,8 @@ function loadHRDashboard(){
     sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',currentUser.id);
     if(window._lastSeenTimer) clearInterval(window._lastSeenTimer);
     window._lastSeenTimer = setInterval(()=>{
-      sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',currentUser.id);
+      console.log('[lastSeen] interval fired at', new Date().toISOString(), 'currentUser.id=', currentUser?.id);
+      sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',currentUser.id).then(r=>console.log('[lastSeen] update result:', r.error, r.status));
     }, 60000);
   }
 }
