@@ -2473,7 +2473,10 @@ window.openConversation = async function(contactId, contactName){
       <input id="msg-search" placeholder="Search messages..." style="width:160px;padding:5px 9px;border:1px solid var(--border);border-radius:7px;font-size:0.75rem;font-family:'DM Sans',sans-serif" oninput="window.filterMessageThread(this.value)">
     </div>
     <div id="msg-thread" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px"><div class="loading-pulse" style="text-align:center;color:var(--ink-3);font-size:0.81rem">Loading…</div></div>
-    <div style="padding:12px;border-top:1px solid var(--border);display:flex;gap:8px">
+    <div id="msg-attach-preview" style="display:none;padding:8px 12px;border-top:1px solid var(--border);font-size:0.78rem;color:var(--ink-3);align-items:center;gap:8px"></div>
+    <div style="padding:12px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center">
+      <input type="file" id="msg-file-input" style="display:none" onchange="window.handleMsgFileSelect(this)">
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('msg-file-input').click()" title="Attach file" style="padding:7px 10px">📎</button>
       <input id="msg-input" placeholder="Type a message..." style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.84rem;font-family:'DM Sans',sans-serif" onkeydown="if(event.key==='Enter')window.sendMessage('${contactId}')">
       <button class="btn btn-primary btn-sm" onclick="window.sendMessage('${contactId}')">Send</button>
     </div>
@@ -2497,7 +2500,7 @@ window.loadMessageThread = async function(contactId){
     const mine=m.sender_id===currentUser.id;
     return`<div class="msg-bubble-wrap" data-content="${m.content.toLowerCase().replace(/"/g,'&quot;')}" style="align-self:${mine?'flex-start':'flex-end'};max-width:70%;position:relative" onmouseover="${mine?`this.querySelector('.msg-actions').style.display='flex'`:''}" onmouseout="${mine?`this.querySelector('.msg-actions').style.display='none'`:''}">
       <div style="display:flex;align-items:center;gap:6px">
-        <div style="background:${mine?'var(--surface-2)':'var(--accent)'};color:${mine?'var(--ink)':'#fff'};padding:8px 12px;border-radius:${mine?'12px 12px 12px 2px':'12px 12px 2px 12px'};font-size:0.84rem">${m.content}${m.edited?'<span style="font-size:0.65rem;opacity:0.6;margin-left:5px">(edited)</span>':''}</div>
+        <div style="background:${mine?'var(--surface-2)':'var(--accent)'};color:${mine?'var(--ink)':'#fff'};padding:8px 12px;border-radius:${mine?'12px 12px 12px 2px':'12px 12px 2px 12px'};font-size:0.84rem">${m.attachment_url?`<a href="${m.attachment_url}" target="_blank" style="color:inherit;text-decoration:underline;display:flex;align-items:center;gap:5px;margin-bottom:${m.content?'4px':'0'}">📎 ${m.attachment_name}</a>`:''}${m.content?m.content:''}${m.edited?'<span style="font-size:0.65rem;opacity:0.6;margin-left:5px">(edited)</span>':''}</div>
         ${mine?`<div class="msg-actions" style="display:none;gap:3px">
           <button onclick="window.editMessage('${m.id}','${m.content.replace(/'/g,"\\'")}')" style="background:none;border:none;cursor:pointer;font-size:0.75rem;opacity:0.5;padding:2px" title="Edit">✏️</button>
           <button onclick="window.deleteMessage('${m.id}')" style="background:none;border:none;cursor:pointer;font-size:0.75rem;opacity:0.5;padding:2px" title="Delete">🗑️</button>
@@ -2512,12 +2515,42 @@ window.loadMessageThread = async function(contactId){
   el.scrollTop=el.scrollHeight;
 };
 
+window.handleMsgFileSelect = function(input){
+  const file=input.files[0];
+  if(!file) return;
+  if(file.size > 10*1024*1024){ showToast('File too large. Max 10MB.'); input.value=''; return; }
+  window._pendingAttachment = file;
+  const preview=document.getElementById('msg-attach-preview');
+  preview.style.display='flex';
+  preview.innerHTML=`📎 ${file.name} (${(file.size/1024).toFixed(0)}KB) <button onclick="window.clearMsgAttachment()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:0.78rem;margin-left:auto">✕</button>`;
+};
+
+window.clearMsgAttachment = function(){
+  window._pendingAttachment = null;
+  document.getElementById('msg-file-input').value='';
+  document.getElementById('msg-attach-preview').style.display='none';
+};
+
 window.sendMessage = async function(contactId){
   const input=document.getElementById('msg-input');
   const content=input.value.trim();
-  if(!content) return;
+  const file=window._pendingAttachment;
+  if(!content && !file) return;
+
+  let attachment_url=null, attachment_name=null, attachment_type=null;
+  if(file){
+    const path=`${tid()}/${currentUser.id}_${contactId}/${Date.now()}_${file.name}`;
+    const {error:upErr}=await sb.storage.from('message-attachments').upload(path,file);
+    if(upErr){ showToast('Error uploading file: '+upErr.message); return; }
+    const {data:urlData}=await sb.storage.from('message-attachments').createSignedUrl(path,604800);
+    attachment_url=urlData?.signedUrl||null;
+    attachment_name=file.name;
+    attachment_type=file.type;
+  }
+
   input.value='';
-  const {error}=await sb.from('messages').insert({tenant_id:tid(),sender_id:currentUser.id,recipient_id:contactId,content});
+  window.clearMsgAttachment();
+  const {error}=await sb.from('messages').insert({tenant_id:tid(),sender_id:currentUser.id,recipient_id:contactId,content:content||'',attachment_url,attachment_name,attachment_type});
   if(error){ showToast('Error sending message: '+error.message); return; }
   await window.loadMessageThread(contactId);
 };
