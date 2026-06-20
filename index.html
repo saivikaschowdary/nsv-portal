@@ -2913,9 +2913,10 @@ async function viewEmployee(empId){
   const { data:e } = await sb.from('v_employee_profile').select('*').eq('employee_id',empId).single();
   if(!e) return;
   const {data:empLeavesForView}=await sb.from('leave_requests').select('leave_type,total_days,status').eq('employee_id',empId);
-  const usedAnnual=(empLeavesForView||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Annual').reduce((s,l)=>s+(l.total_days||0),0);
-  const usedSick=(empLeavesForView||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Sick').reduce((s,l)=>s+(l.total_days||0),0);
-  const usedPersonal=(empLeavesForView||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Personal').reduce((s,l)=>s+(l.total_days||0),0);
+  const _curYearV=new Date().getFullYear();
+  const usedAnnual=(empLeavesForView||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Annual'&&l.start_date&&new Date(l.start_date).getFullYear()===_curYearV).reduce((s,l)=>s+(l.total_days||0),0);
+  const usedSick=(empLeavesForView||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Sick'&&l.start_date&&new Date(l.start_date).getFullYear()===_curYearV).reduce((s,l)=>s+(l.total_days||0),0);
+  const usedPersonal=(empLeavesForView||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Personal'&&l.start_date&&new Date(l.start_date).getFullYear()===_curYearV).reduce((s,l)=>s+(l.total_days||0),0);
   const remAnnual=(e.annual_leave_balance||20)-usedAnnual;
   const remSick=(e.sick_leave_balance||10)-usedSick;
   const remPersonal=(e.personal_leave_balance||5)-usedPersonal;
@@ -3510,9 +3511,10 @@ async function renderEmployeeDashboard(){
       <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:12px">Leave Balance</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
         ${(()=>{
-          const used_annual=(empLeaves||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Annual').reduce((s,l)=>s+(l.total_days||0),0);
-          const used_sick=(empLeaves||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Sick').reduce((s,l)=>s+(l.total_days||0),0);
-          const used_personal=(empLeaves||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Personal').reduce((s,l)=>s+(l.total_days||0),0);
+          const _curYear=new Date().getFullYear();
+          const used_annual=(empLeaves||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Annual'&&l.start_date&&new Date(l.start_date).getFullYear()===_curYear).reduce((s,l)=>s+(l.total_days||0),0);
+          const used_sick=(empLeaves||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Sick'&&l.start_date&&new Date(l.start_date).getFullYear()===_curYear).reduce((s,l)=>s+(l.total_days||0),0);
+          const used_personal=(empLeaves||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Personal'&&l.start_date&&new Date(l.start_date).getFullYear()===_curYear).reduce((s,l)=>s+(l.total_days||0),0);
           const annual_bal=(emp?.annual_leave_balance||20)-used_annual;
           const sick_bal=(emp?.sick_leave_balance||10)-used_sick;
           const personal_bal=(emp?.personal_leave_balance||5)-used_personal;
