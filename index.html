@@ -902,7 +902,7 @@ window.viewTimesheet = async function(id){
     {label:'Saturday',val:t.saturday_hours||0},
     {label:'Sunday',val:t.sunday_hours||0}
   ];
-  const canApprove = ['admin','manager'].includes(currentProfile?.role) && t.status==='Submitted';
+  const canApprove = ['admin','hr','manager'].includes(currentProfile?.role) && t.status==='Submitted';
   showModal(`
   <div class="modal-header"><h3>${name} — Week of ${t.week_start}</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
   <div class="modal-body">
@@ -1167,7 +1167,7 @@ window.viewLeave = async function(id){
   if(!l)return;
   const {data:ep}=await sb.from('v_employee_profile').select('full_name').eq('employee_id',l.employee_id).maybeSingle();
   const name=ep?.full_name||'Unknown';
-  const canApprove=['admin','manager'].includes(currentProfile?.role)&&l.status==='Pending';
+  const canApprove=['admin','hr','manager'].includes(currentProfile?.role)&&l.status==='Pending';
   showModal(`
   <div class="modal-header"><h3>${name} — ${l.leave_type} Leave</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
   <div class="modal-body">
