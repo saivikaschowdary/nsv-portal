@@ -610,8 +610,8 @@ async function doSaveProfile(){
   const errEl=document.getElementById('profile-err');
   if(!ecname||!ecphone){ errEl.textContent='Emergency contact name and phone required.'; errEl.style.display='block'; return; }
   const d={preferred_name:document.getElementById('pp-nickname').value.trim(),phone:document.getElementById('pp-phone').value.trim(),biography:document.getElementById('pp-bio').value.trim(),emergency_name:ecname,emergency_rel:document.getElementById('pp-ecrel').value.trim(),emergency_phone:ecphone,working_hours:document.getElementById('pp-hours').value,work_mode:document.getElementById('pp-mode').value,certifications:document.getElementById('pp-certs').value.trim(),additional_skills:document.getElementById('pp-skills').value.trim(),lca_duties:document.getElementById('pp-lca').value.trim()};
-  const tbl = currentProfile.role==='manager'?'managers':'employees';
-  await sb.from(tbl).update(d).eq('profile_id', currentUser.id);
+  const { error: saveErr } = await sb.from('employees').update(d).eq('profile_id', currentUser.id);
+  if(saveErr){ errEl.textContent='Error: '+saveErr.message; errEl.style.display='block'; return; }
   await sb.from('profiles').update({profile_complete:true}).eq('id', currentUser.id);
   currentProfile.profile_complete=true;
   if(currentProfile.role==='employee'){ await renderEmployeeDashboard(); showScreen('screen-employee'); }
