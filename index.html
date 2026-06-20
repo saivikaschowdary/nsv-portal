@@ -2487,9 +2487,9 @@ window.loadMessageThread = async function(contactId){
   if(list.length===0){ el.innerHTML='<div style="text-align:center;color:var(--ink-3);font-size:0.81rem;margin:auto">No messages yet. Say hello!</div>'; return; }
   el.innerHTML=list.map(m=>{
     const mine=m.sender_id===currentUser.id;
-    return`<div style="align-self:${mine?'flex-end':'flex-start'};max-width:70%">
-      <div style="background:${mine?'var(--accent)':'var(--surface-2)'};color:${mine?'#fff':'var(--ink)'};padding:8px 12px;border-radius:${mine?'12px 12px 2px 12px':'12px 12px 12px 2px'};font-size:0.84rem">${m.content}</div>
-      <div style="font-size:0.65rem;color:var(--ink-3);margin-top:2px;text-align:${mine?'right':'left'}">${new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+    return`<div style="align-self:${mine?'flex-start':'flex-end'};max-width:70%">
+      <div style="background:${mine?'var(--surface-2)':'var(--accent)'};color:${mine?'var(--ink)':'#fff'};padding:8px 12px;border-radius:${mine?'12px 12px 12px 2px':'12px 12px 2px 12px'};font-size:0.84rem">${m.content}</div>
+      <div style="font-size:0.65rem;color:var(--ink-3);margin-top:2px;text-align:${mine?'left':'right'}">${new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
     </div>`;
   }).join('');
   el.scrollTop=el.scrollHeight;
