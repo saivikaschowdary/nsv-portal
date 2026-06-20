@@ -2823,20 +2823,6 @@ async function rDash(){
 
     </div>
 
-    <!-- Recent Activity -->
-    <div class="card card-padded" style="margin-top:14px">
-      <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:12px">Quick Actions</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn btn-ghost btn-sm" onclick="navigate('employees')">👥 View All Employees</button>
-        <button class="btn btn-ghost btn-sm" onclick="navigate('visas')">🛂 Visa Tracker</button>
-        <button class="btn btn-ghost btn-sm" onclick="navigate('projects')">📁 Project Tracker</button>
-        <button class="btn btn-ghost btn-sm" onclick="navigate('reviews')">📋 Evaluations</button>
-        <button class="btn btn-ghost btn-sm" onclick="navigate('timesheets')">⏱️ Timesheets</button>
-        <button class="btn btn-ghost btn-sm" onclick="navigate('leaves')">🏖️ Leave Requests</button>
-        ${isAdmin()?`<button class="btn btn-ghost btn-sm" onclick="navigate('users')">⚙️ Manage Users</button>`:''}
-      </div>
-    </div>
-
   </div>`;
 }
 
