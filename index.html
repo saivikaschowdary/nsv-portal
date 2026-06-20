@@ -2912,6 +2912,13 @@ async function rEmployees(){
 async function viewEmployee(empId){
   const { data:e } = await sb.from('v_employee_profile').select('*').eq('employee_id',empId).single();
   if(!e) return;
+  const {data:empLeavesForView}=await sb.from('leave_requests').select('leave_type,total_days,status').eq('employee_id',empId);
+  const usedAnnual=(empLeavesForView||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Annual').reduce((s,l)=>s+(l.total_days||0),0);
+  const usedSick=(empLeavesForView||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Sick').reduce((s,l)=>s+(l.total_days||0),0);
+  const usedPersonal=(empLeavesForView||[]).filter(l=>l.status==='Approved'&&l.leave_type==='Personal').reduce((s,l)=>s+(l.total_days||0),0);
+  const remAnnual=(e.annual_leave_balance||20)-usedAnnual;
+  const remSick=(e.sick_leave_balance||10)-usedSick;
+  const remPersonal=(e.personal_leave_balance||5)-usedPersonal;
   showModal(`
   <div class="modal-header"><div style="display:flex;align-items:center;gap:9px">${mkAv(e.full_name,0,34)}<div><h3>${e.full_name}</h3><div style="font-size:0.74rem;color:var(--ink-3)">${e.job_title||''} · ${e.department_name||''}</div></div></div>
   <div style="display:flex;gap:6px">${isAdminOrHR()?`<button class="btn btn-primary btn-sm" onclick="editEmployee('${empId}')">Edit</button>`:''}
@@ -2950,11 +2957,11 @@ async function viewEmployee(empId){
       </div>
     </div>`:''}
     <div style="background:var(--surface-2);border-radius:9px;padding:11px;margin-bottom:9px">
-      <div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px">Leave Balance</div>
+      <div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px">Remaining Leave Balance</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:0.78rem">
-        <div style="text-align:center"><div style="font-size:0.62rem;color:var(--ink-3)">Annual</div><div style="font-weight:700;font-size:1.1rem">${e.annual_leave_balance||20}</div></div>
-        <div style="text-align:center"><div style="font-size:0.62rem;color:var(--ink-3)">Sick</div><div style="font-weight:700;font-size:1.1rem">${e.sick_leave_balance||10}</div></div>
-        <div style="text-align:center"><div style="font-size:0.62rem;color:var(--ink-3)">Personal</div><div style="font-weight:700;font-size:1.1rem">${e.personal_leave_balance||5}</div></div>
+        <div style="text-align:center"><div style="font-size:0.62rem;color:var(--ink-3)">Annual</div><div style="font-weight:700;font-size:1.1rem;color:${remAnnual<=3?'var(--red)':'var(--ink)'}">${remAnnual}</div><div style="font-size:0.65rem;color:var(--ink-3)">of ${e.annual_leave_balance||20}</div></div>
+        <div style="text-align:center"><div style="font-size:0.62rem;color:var(--ink-3)">Sick</div><div style="font-weight:700;font-size:1.1rem;color:${remSick<=2?'var(--red)':'var(--ink)'}">${remSick}</div><div style="font-size:0.65rem;color:var(--ink-3)">of ${e.sick_leave_balance||10}</div></div>
+        <div style="text-align:center"><div style="font-size:0.62rem;color:var(--ink-3)">Personal</div><div style="font-weight:700;font-size:1.1rem;color:${remPersonal<=1?'var(--red)':'var(--ink)'}">${remPersonal}</div><div style="font-size:0.65rem;color:var(--ink-3)">of ${e.personal_leave_balance||5}</div></div>
       </div>
     </div>
     <div style="background:var(--surface-2);border-radius:9px;padding:11px;margin-bottom:9px">
