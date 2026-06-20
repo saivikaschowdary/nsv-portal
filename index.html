@@ -3084,7 +3084,12 @@ async function saveEmployee(){
   const _ed=await _eu.json();
   const newUserId=_ed.id, se=_ed.error?{message:_ed.error}:null;
   if(se||!newUserId){errEl.textContent=se?.message||'Error creating user';errEl.style.display='block';return;}
-  const {data:emp}=await sb.from('employees').insert({tenant_id:tid(),profile_id:newUserId,job_title:document.getElementById('ae-title').value.trim(),department_id:document.getElementById('ae-dept').value||null,manager_id:document.getElementById('ae-mgr').value||null,status:document.getElementById('ae-status').value}).select().single();
+  const {data:emp,error:empErr}=await sb.from('employees').insert({tenant_id:tid(),profile_id:newUserId,job_title:document.getElementById('ae-title').value.trim(),department_id:document.getElementById('ae-dept').value||null,manager_id:document.getElementById('ae-mgr').value||null,status:document.getElementById('ae-status').value}).select().single();
+  if(empErr||!emp){
+    errEl.textContent='User account was created but employee record failed: '+(empErr?.message||'Unknown error')+'. Please delete this user from Users tab and try again.';
+    errEl.style.display='block';
+    return;
+  }
   const vt=document.getElementById('ae-visa').value;
   if(vt&&emp){await sb.from('visa_details').insert({tenant_id:tid(),employee_id:emp.id,visa_type:vt,visa_expiry_date:document.getElementById('ae-vexp').value||null});}
   closeModal();
