@@ -2637,8 +2637,126 @@ async function rDash(){
         <div class="metric-card mc-amber" style="cursor:pointer" onclick="showFinancialPopup('bench')"><div class="metric-label">Bench Cost (Monthly Est.)</div><div class="metric-val cv-amber">$${benchCost.toLocaleString(undefined,{maximumFractionDigits:0})}</div><div class="metric-sub">${benchIds.size} on bench · click for breakdown →</div></div>
       </div>
     </div>
+    `;
+    window._financialData = {payMap, hoursByEmp, benchIds, totalRevenue, totalCost, netMargin, benchCost, empStatusList, marginPct};
+
+    // Build per-employee revenue/cost/margin rows for bar chart
+    const {data:empProfilesForChart}=await sb.from('v_employee_profile').select('employee_id,full_name,department_name,current_client').eq('tenant_id',tid());
+    const empMapForChart={};(empProfilesForChart||[]).forEach(e=>empMapForChart[e.employee_id]=e);
+
+    const empFinRows = Object.keys(hoursByEmp).map(empId=>{
+      const p = payMap[empId];
+      const hours = hoursByEmp[empId];
+      const payRate = p?.salary_type==='Hourly'?(p.amount||0):0;
+      const billRate = p?.billing_rate||0;
+      const rev = hours*billRate;
+      const cost = hours*payRate;
+      const margin = rev-cost;
+      const emp = empMapForChart[empId];
+      return { name: emp?.full_name||'Unknown', client: emp?.current_client||'Unassigned', dept: emp?.department_name||'Unassigned', rev, cost, margin };
+    }).filter(r=>r.rev>0||r.cost>0).sort((a,b)=>b.rev-a.rev);
+
+    const maxRevCost = Math.max(...empFinRows.map(r=>Math.max(r.rev,r.cost)），1) || 1;
+
+    // 1. Bar chart - Revenue vs Cost vs Margin per employee
+    const barChartHTML = empFinRows.length===0?'<div style="color:var(--ink-3);font-size:0.81rem;text-align:center;padding:24px">No billing data yet. Set pay/billing rates in Payroll.</div>':
+    `<div style="display:flex;flex-direction:column;gap:10px">
+      ${empFinRows.slice(0,8).map(r=>`
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:0.76rem;margin-bottom:3px"><span style="font-weight:500">${r.name}</span><span style="color:var(--ink-3)">$${r.margin.toLocaleString(undefined,{maximumFractionDigits:0})} margin</span></div>
+        <div style="display:flex;gap:3px;height:16px">
+          <div style="background:var(--accent);border-radius:3px;width:${(r.rev/maxRevCost*100)}%;min-width:2px" title="Revenue: $${r.rev.toFixed(0)}"></div>
+        </div>
+        <div style="display:flex;gap:3px;height:16px;margin-top:2px">
+          <div style="background:var(--ink-3);opacity:0.5;border-radius:3px;width:${(r.cost/maxRevCost*100)}%;min-width:2px" title="Cost: $${r.cost.toFixed(0)}"></div>
+        </div>
+      </div>`).join('')}
+      <div style="display:flex;gap:14px;font-size:0.72rem;color:var(--ink-3);margin-top:4px">
+        <span><span style="display:inline-block;width:9px;height:9px;background:var(--accent);border-radius:2px;margin-right:4px"></span>Revenue</span>
+        <span><span style="display:inline-block;width:9px;height:9px;background:var(--ink-3);opacity:0.5;border-radius:2px;margin-right:4px"></span>Cost</span>
+      </div>
+    </div>`;
+
+    // 2. Donut chart - Margin % (CSS conic-gradient)
+    const marginPctNum = parseFloat(marginPct)||0;
+    const donutDeg = Math.max(0,Math.min(100,marginPctNum))*3.6;
+    const donutHTML = `<div style="display:flex;align-items:center;gap:20px">
+      <div style="width:120px;height:120px;border-radius:50%;background:conic-gradient(var(--accent) 0deg ${donutDeg}deg, var(--surface-2) ${donutDeg}deg 360deg);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <div style="width:84px;height:84px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <div style="font-size:1.3rem;font-weight:700;color:var(--accent)">${marginPctNum.toFixed(0)}%</div>
+          <div style="font-size:0.6rem;color:var(--ink-3);text-transform:uppercase">Margin</div>
+        </div>
+      </div>
+      <div style="font-size:0.81rem;color:var(--ink-2)">
+        <div style="margin-bottom:6px"><span style="display:inline-block;width:9px;height:9px;background:var(--accent);border-radius:2px;margin-right:6px"></span>Margin: $${netMargin.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+        <div><span style="display:inline-block;width:9px;height:9px;background:var(--surface-2);border:1px solid var(--border);border-radius:2px;margin-right:6px"></span>Cost: $${totalCost.toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+      </div>
+    </div>`;
+
+    // 3. Revenue trend over time (last 6 months from timesheets)
+    const {data:allApprovedTs}=await sb.from('timesheets').select('employee_id,total_hours,week_start').eq('tenant_id',tid()).eq('status','Approved');
+    const monthlyRev={};
+    (allApprovedTs||[]).forEach(t=>{
+      const p=payMap[t.employee_id];
+      const billRate=p?.billing_rate||0;
+      const month=t.week_start?t.week_start.slice(0,7):null;
+      if(month){ monthlyRev[month]=(monthlyRev[month]||0)+((t.total_hours||0)*billRate); }
+    });
+    const sortedMonths=Object.keys(monthlyRev).sort().slice(-6);
+    const maxMonthRev=Math.max(...sortedMonths.map(m=>monthlyRev[m]),1)||1;
+    const trendHTML = sortedMonths.length===0?'<div style="color:var(--ink-3);font-size:0.81rem;text-align:center;padding:24px">Not enough historical data yet.</div>':
+    `<div style="display:flex;align-items:flex-end;gap:10px;height:120px;padding-top:10px">
+      ${sortedMonths.map(m=>{
+        const h=Math.max((monthlyRev[m]/maxMonthRev*100),3);
+        const label=new Date(m+'-01').toLocaleDateString(undefined,{month:'short'});
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+          <div style="font-size:0.65rem;color:var(--ink-3)">$${(monthlyRev[m]/1000).toFixed(1)}k</div>
+          <div style="width:100%;background:var(--accent);border-radius:4px 4px 0 0;height:${h}%"></div>
+          <div style="font-size:0.7rem;color:var(--ink-3)">${label}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+    // 5. Client profitability - stacked bar by client
+    const clientMap={};
+    empFinRows.forEach(r=>{
+      if(!clientMap[r.client]) clientMap[r.client]={rev:0,cost:0};
+      clientMap[r.client].rev+=r.rev;
+      clientMap[r.client].cost+=r.cost;
+    });
+    const clientRows=Object.keys(clientMap).map(c=>({client:c,...clientMap[c],margin:clientMap[c].rev-clientMap[c].cost})).sort((a,b)=>b.rev-a.rev);
+    const maxClientRev=Math.max(...clientRows.map(c=>c.rev),1)||1;
+    const clientHTML = clientRows.length===0?'<div style="color:var(--ink-3);font-size:0.81rem;text-align:center;padding:24px">No client billing data yet.</div>':
+    `<div style="display:flex;flex-direction:column;gap:9px">
+      ${clientRows.slice(0,6).map(c=>`
+      <div>
+        <div style="display:flex;justify-content:space-between;font-size:0.76rem;margin-bottom:3px"><span style="font-weight:500">${c.client}</span><span style="color:${c.margin>=0?'var(--accent)':'var(--red)'}">$${c.margin.toLocaleString(undefined,{maximumFractionDigits:0})} margin</span></div>
+        <div style="background:var(--surface-2);border-radius:4px;height:14px;overflow:hidden;display:flex">
+          <div style="background:var(--accent);width:${(c.rev/maxClientRev*100)}%;height:100%"></div>
+        </div>
+      </div>`).join('')}
+    </div>`;
+
+    financialHTML += `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px">
+      <div class="card card-padded">
+        <div style="font-size:0.82rem;font-weight:600;margin-bottom:12px">Revenue vs Cost by Employee</div>
+        ${barChartHTML}
+      </div>
+      <div class="card card-padded">
+        <div style="font-size:0.82rem;font-weight:600;margin-bottom:12px">Overall Margin</div>
+        ${donutHTML}
+      </div>
+      <div class="card card-padded">
+        <div style="font-size:0.82rem;font-weight:600;margin-bottom:4px">Revenue Trend (Last 6 Months)</div>
+        ${trendHTML}
+      </div>
+      <div class="card card-padded">
+        <div style="font-size:0.82rem;font-weight:600;margin-bottom:12px">Client Profitability</div>
+        ${clientHTML}
+      </div>
+    </div>
     <div style="font-size:0.95rem;font-weight:600;margin-bottom:10px;color:var(--ink)">📊 Operations</div>`;
-    window._financialData = {payMap, hoursByEmp, benchIds, totalRevenue, totalCost, netMargin, benchCost, empStatusList};
   }
   const emps=er.data||[], today=new Date();
   const total=emps.length, bench=emps.filter(e=>e.status==='Bench').length, active=emps.filter(e=>e.status==='Active').length;
