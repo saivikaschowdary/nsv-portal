@@ -2656,7 +2656,7 @@ async function rDash(){
       return { name: emp?.full_name||'Unknown', client: emp?.current_client||'Unassigned', dept: emp?.department_name||'Unassigned', rev, cost, margin };
     }).filter(r=>r.rev>0||r.cost>0).sort((a,b)=>b.rev-a.rev);
 
-    const maxRevCost = Math.max(...empFinRows.map(r=>Math.max(r.rev,r.cost)），1) || 1;
+    const maxRevCost = Math.max(...empFinRows.map(r=>Math.max(r.rev,r.cost)),1) || 1;
 
     // 1. Bar chart - Revenue vs Cost vs Margin per employee
     const barChartHTML = empFinRows.length===0?'<div style="color:var(--ink-3);font-size:0.81rem;text-align:center;padding:24px">No billing data yet. Set pay/billing rates in Payroll.</div>':
