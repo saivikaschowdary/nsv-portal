@@ -71,6 +71,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--surface);color:var(--ink)
 .metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
 .metric-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius-lg);padding:15px 17px;cursor:pointer;transition:all 0.15s}
 .metric-card:hover{box-shadow:0 4px 18px rgba(0,0,0,0.08);transform:translateY(-1px)}
+.loading-pulse{animation:loadingPulse 1.3s ease-in-out infinite}
+@keyframes loadingPulse{0%,100%{opacity:0.4}50%{opacity:1}}
 .metric-label{font-size:0.67rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3);margin-bottom:6px}
 .metric-val{font-family:'DM Serif Display',serif;font-size:1.9rem;font-weight:400;line-height:1}
 .metric-sub{font-size:0.72rem;color:var(--ink-3);margin-top:4px}
@@ -290,7 +292,7 @@ tr:hover td{background:var(--surface)}
           <span style="font-weight:600;font-size:0.85rem">Notifications</span>
           <button onclick="window.markAllRead()" style="font-size:0.75rem;color:var(--accent);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif">Mark all read</button>
         </div>
-        <div id="notif-list"><div style="padding:20px;text-align:center;color:var(--ink-3);font-size:0.81rem">Loading...</div></div>
+        <div id="notif-list"><div style="padding:20px;text-align:center;color:var(--ink-3);font-size:0.81rem"><span class="loading-pulse">Loading…</span></div></div>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="doSignOut()" style="color:rgba(255,255,255,0.4);border-color:rgba(255,255,255,0.1)">
         <span id="topnav-user">Admin</span> · Sign Out
@@ -1987,7 +1989,7 @@ window.loadEmpPayroll = async function(){
       <div style="background:var(--surface-2);border-radius:8px;padding:10px;text-align:center"><div style="font-size:0.62rem;color:var(--ink-3)">Health Ins.</div><div style="font-weight:500;margin-top:2px">${p.health_insurance?'$'+p.health_insurance+'/mo':'—'}</div></div>
     </div>
     <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px">Banking <button class="btn btn-primary btn-sm" onclick="window.openAddBankAccount('${empRec.id}')" style="font-size:0.72rem;margin-left:8px">+ Add Account</button></div>
-    <div id="emp-bank-accounts-list">Loading...</div>
+    <div id="emp-bank-accounts-list"><span class="loading-pulse">Loading…</span></div>
   `;
   setTimeout(()=>window.loadEmpBankAccounts(empRec.id), 50);
 };
@@ -2983,11 +2985,11 @@ async function viewEmployee(empId){
     </div>`:''}
     <div style="background:var(--surface-2);border-radius:9px;padding:11px">
       <div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px">Documents</div>
-      <div id="admin-modal-doc-list"><div style="font-size:0.78rem;color:var(--ink-3)">Loading...</div></div>
+      <div id="admin-modal-doc-list"><div style="font-size:0.78rem;color:var(--ink-3)"><span class="loading-pulse">Loading…</span></div></div>
     </div>
     <div style="background:var(--surface-2);border-radius:9px;padding:11px;margin-top:9px">
       <div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px">Onboarding Progress</div>
-      <div id="admin-checklist"><div style="font-size:0.78rem;color:var(--ink-3)">Loading...</div></div>
+      <div id="admin-checklist"><div style="font-size:0.78rem;color:var(--ink-3)"><span class="loading-pulse">Loading…</span></div></div>
     </div>
   </div>
   <div class="modal-footer">
@@ -3333,7 +3335,7 @@ async function rSettings(){
         <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3)">Departments</div>
         <button class="btn btn-primary btn-sm" onclick="window.openAddDept()">+ Add Department</button>
       </div>
-      <div id="dept-list">Loading...</div>
+      <div id="dept-list"><span class="loading-pulse">Loading…</span></div>
     </div>
 
     <div style="display:flex;justify-content:flex-end;gap:8px">
@@ -3461,7 +3463,7 @@ async function renderEmployeeDashboard(){
           <span style="font-weight:600;font-size:0.85rem">Notifications</span>
           <button onclick="window.markAllEmpRead()" style="font-size:0.75rem;color:var(--accent);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif">Mark all read</button>
         </div>
-        <div id="emp-notif-list"><div style="padding:20px;text-align:center;color:var(--ink-3);font-size:0.81rem">Loading...</div></div>
+        <div id="emp-notif-list"><div style="padding:20px;text-align:center;color:var(--ink-3);font-size:0.81rem"><span class="loading-pulse">Loading…</span></div></div>
       </div>
       <button onclick="doSignOut()" style="font-size:0.75rem;color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:4px 10px;cursor:pointer;font-family:'DM Sans',sans-serif">Sign Out</button>
     </div>
@@ -3531,17 +3533,17 @@ async function renderEmployeeDashboard(){
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div>
           <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3)">Onboarding Checklist</div>
-          <div style="font-size:0.75rem;color:var(--ink-3);margin-top:2px" id="emp-checklist-count">Loading...</div>
+          <div style="font-size:0.75rem;color:var(--ink-3);margin-top:2px" id="emp-checklist-count"><span class="loading-pulse">Loading…</span></div>
         </div>
       </div>
-      <div id="emp-checklist"><div style="text-align:center;padding:16px;color:var(--ink-3);font-size:0.81rem">Loading...</div></div>
+      <div id="emp-checklist"><div style="text-align:center;padding:16px;color:var(--ink-3);font-size:0.81rem"><span class="loading-pulse">Loading…</span></div></div>
     </div>
 
     <div class="card card-padded" style="margin-bottom:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div>
           <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3)">Documents</div>
-          <div style="font-size:0.75rem;color:var(--ink-3);margin-top:2px" id="emp-doc-count">Loading...</div>
+          <div style="font-size:0.75rem;color:var(--ink-3);margin-top:2px" id="emp-doc-count"><span class="loading-pulse">Loading…</span></div>
         </div>
         <button class="btn btn-primary btn-sm" onclick="window.openUploadDocument()">+ Upload Document</button>
       </div>
@@ -3552,7 +3554,7 @@ async function renderEmployeeDashboard(){
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div>
           <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3)">Leave Requests</div>
-          <div style="font-size:0.75rem;color:var(--ink-3);margin-top:2px" id="emp-leave-count">Loading...</div>
+          <div style="font-size:0.75rem;color:var(--ink-3);margin-top:2px" id="emp-leave-count"><span class="loading-pulse">Loading…</span></div>
         </div>
         <button class="btn btn-primary btn-sm" onclick="window.openSubmitLeave()">+ Request Leave</button>
       </div>
@@ -3563,7 +3565,7 @@ async function renderEmployeeDashboard(){
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div>
           <div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3)">Timesheets</div>
-          <div style="font-size:0.75rem;color:var(--ink-3);margin-top:2px" id="emp-ts-count">Loading...</div>
+          <div style="font-size:0.75rem;color:var(--ink-3);margin-top:2px" id="emp-ts-count"><span class="loading-pulse">Loading…</span></div>
         </div>
         <button class="btn btn-primary btn-sm" onclick="window.openSubmitTimesheet()">+ Submit Timesheet</button>
       </div>
@@ -3574,7 +3576,7 @@ async function renderEmployeeDashboard(){
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div><div style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-3)">Pay & Banking</div></div>
       </div>
-      <div id="emp-payroll"><div style="text-align:center;padding:16px;color:var(--ink-3);font-size:0.81rem">Loading...</div></div>
+      <div id="emp-payroll"><div style="text-align:center;padding:16px;color:var(--ink-3);font-size:0.81rem"><span class="loading-pulse">Loading…</span></div></div>
     </div>
 
     <div class="card card-padded">
