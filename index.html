@@ -2477,6 +2477,9 @@ window.openConversation = async function(contactId, contactName){
   // Mark messages from this contact as read
   await sb.from('messages').update({is_read:true}).eq('sender_id',contactId).eq('recipient_id',currentUser.id).eq('is_read',false);
   await window.updateUnreadMsgBadge();
+  // Clear the unread badge on this specific contact row
+  const contactRow=document.getElementById('contact-'+contactId);
+  if(contactRow){ const badge=contactRow.querySelector('span[style*="border-radius:50%"]'); if(badge) badge.remove(); }
 };
 
 window.loadMessageThread = async function(contactId){
