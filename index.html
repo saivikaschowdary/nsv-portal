@@ -579,6 +579,8 @@ async function doSignOut(){
   cleanupRealtime();
   if(window._notifPollTimer) clearInterval(window._notifPollTimer);
   if(window._empNotifPollTimer) clearInterval(window._empNotifPollTimer);
+  if(window._msgPollTimer) clearInterval(window._msgPollTimer);
+  if(window._lastSeenTimer) clearInterval(window._lastSeenTimer);
   await sb.auth.signOut();
   // Clear all login fields
   const fields = ['login-email','login-password','mgr-email','mgr-password','portal-email','portal-password'];
@@ -2420,7 +2422,7 @@ window.setDailyStatus = async function(status){
 // MESSAGING (Admin/HR/Manager only)
 // ════════════════════════════════════════════════════════════
 async function rMessages(){
-  const {data:staff}=await sb.from('profiles').select('id,full_name,email,role').eq('tenant_id',tid()).in('role',['admin','hr','manager']).neq('id',currentUser.id).order('full_name');
+  const {data:staff}=await sb.from('profiles').select('id,full_name,email,role,last_seen').eq('tenant_id',tid()).in('role',['admin','hr','manager']).neq('id',currentUser.id).order('full_name');
   const contacts=staff||[];
 
   const {data:allMsgs}=await sb.from('messages').select('*').eq('tenant_id',tid()).or(`sender_id.eq.${currentUser.id},recipient_id.eq.${currentUser.id}`).order('created_at',{ascending:false});
@@ -2443,7 +2445,7 @@ async function rMessages(){
           const convo=convoMap[c.id];
           const preview=convo?.lastMsg?.content?.slice(0,40)||'No messages yet';
           return`<div onclick="window.openConversation('${c.id}','${c.full_name.replace(/'/g,"\\'")}')" id="contact-${c.id}" style="padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
-            ${mkAv(c.full_name,i,34)}
+            <div style="position:relative">${mkAv(c.full_name,i,34)}<span style="position:absolute;bottom:0;right:0;width:9px;height:9px;border-radius:50%;border:2px solid #fff;background:${c.last_seen && (new Date()-new Date(c.last_seen))<120000?'#4ade80':'#d1d5db'}"></span></div>
             <div style="flex:1;min-width:0">
               <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:500;font-size:0.83rem">${c.full_name}</span>${convo?.unread?`<span style="background:var(--accent);color:#fff;font-size:0.62rem;font-weight:700;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center">${convo.unread}</span>`:''}</div>
               <div style="font-size:0.73rem;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.role==='hr'?'HR':c.role.charAt(0).toUpperCase()+c.role.slice(1)} · ${preview}</div>
@@ -2808,6 +2810,12 @@ function loadHRDashboard(){
       window.updateUnreadMsgBadge();
       if(currentPage==='messages' && window._activeConvoId) window.loadMessageThread(window._activeConvoId);
     }, 15000);
+    // Update last_seen periodically
+    sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',currentUser.id);
+    if(window._lastSeenTimer) clearInterval(window._lastSeenTimer);
+    window._lastSeenTimer = setInterval(()=>{
+      sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',currentUser.id);
+    }, 60000);
   }
 }
 
