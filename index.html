@@ -2509,11 +2509,34 @@ window.sendMessage = async function(contactId){
 };
 
 window.updateUnreadMsgBadge = async function(){
-  const {data:unread}=await sb.from('messages').select('id').eq('recipient_id',currentUser.id).eq('is_read',false).eq('tenant_id',tid());
-  const count=(unread||[]).length;
+  const {data:unread}=await sb.from('messages').select('id,sender_id,content,created_at').eq('recipient_id',currentUser.id).eq('is_read',false).eq('tenant_id',tid()).order('created_at',{ascending:false});
+  const list=unread||[];
+  const count=list.length;
   const badge=document.getElementById('msg-unread-badge');
   if(badge){ badge.textContent=count>9?'9+':count; badge.style.display=count>0?'flex':'none'; }
+
+  // Toast for genuinely new messages we haven't seen yet
+  if(!window._seenMsgIds) window._seenMsgIds=new Set();
+  const newOnes=list.filter(m=>!window._seenMsgIds.has(m.id));
+  if(newOnes.length>0 && window._seenMsgIds.size>0){
+    // Only toast if this isn't the very first load (avoid spamming on login)
+    for(const m of newOnes.slice(0,3)){
+      const {data:senderProf}=await sb.from('profiles').select('full_name').eq('id',m.sender_id).maybeSingle();
+      showMessageToast(senderProf?.full_name||'New message', m.content, m.sender_id);
+    }
+  }
+  list.forEach(m=>window._seenMsgIds.add(m.id));
 };
+
+
+function showMessageToast(senderName, content, senderId){
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:20px;right:20px;background:#fff;border:1px solid var(--border);box-shadow:0 8px 28px rgba(0,0,0,0.15);padding:12px 14px;border-radius:12px;z-index:9999;animation:slideUp 0.25s ease;max-width:300px;cursor:pointer;font-family:DM Sans,sans-serif';
+  t.innerHTML=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-size:1rem">💬</span><strong style="font-size:0.84rem">${senderName}</strong></div><div style="font-size:0.81rem;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${content}</div>`;
+  t.onclick=()=>{ navigate('messages'); setTimeout(()=>window.openConversation(senderId, senderName), 150); t.remove(); };
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),6000);
+}
 
 async function platformNav(page){
   document.querySelectorAll('[id^="pnav-"]').forEach(e=>e.classList.remove('active'));
