@@ -2828,21 +2828,41 @@ async function rDash(){
 
 // ── Team Overview ──────────────────────────────────────────
 async function rTeam(){
-  const { data } = await sb.from('profiles').select('id,full_name,email,role,is_active').eq('tenant_id',tid()).eq('role','manager').order('full_name');
+  const { data } = await sb.from('profiles').select('id,full_name,email,role,is_active').eq('tenant_id',tid()).in('role',['manager','hr']).order('full_name');
   const list=data||[];
-  return`<div class="page-header"><div><h2>Team Overview</h2><p>${list.length} manager${list.length!==1?'s':''}</p></div></div>
+  return`<div class="page-header"><div><h2>Team Overview</h2><p>${list.length} member${list.length!==1?'s':''}</p></div></div>
   <div class="page-body"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(265px,1fr));gap:12px">
-    ${list.map((e,i)=>`<div class="card card-padded" style="transition:all 0.15s" onmouseover="this.style.boxShadow='0 4px 18px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
+    ${list.map((e,i)=>`<div class="card card-padded" style="cursor:pointer;transition:all 0.15s" onclick="window.viewStaffProfile('${e.id}')" onmouseover="this.style.boxShadow='0 4px 18px rgba(0,0,0,0.08)'" onmouseout="this.style.boxShadow='none'">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
         <div style="display:flex;align-items:center;gap:8px">${mkAv(e.full_name,i,36)}<div><div style="font-weight:500;font-size:0.86rem">${e.full_name}</div><div style="font-size:0.72rem;color:var(--ink-3)">${e.email}</div></div></div>
-        <span class="badge badge-blue">Manager</span>
+        <span class="badge ${e.role==='hr'?'badge-amber':'badge-blue'}">${e.role==='hr'?'HR':'Manager'}</span>
       </div>
       <div style="font-size:0.75rem;color:var(--ink-3);border-top:1px solid var(--border);padding-top:8px">
         <div>${e.is_active?'<span class="badge badge-green">Active</span>':'<span class="badge badge-gray">Inactive</span>'}</div>
       </div>
-    </div>`).join('')||'<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--ink-3)">No managers yet.</div>'}
+    </div>`).join('')||'<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--ink-3)">No managers or HR yet.</div>'}
   </div></div>`;
 }
+
+window.viewStaffProfile = async function(profileId){
+  const {data:p}=await sb.from('profiles').select('*').eq('id',profileId).single();
+  if(!p) return;
+  showModal(`
+  <div class="modal-header"><div style="display:flex;align-items:center;gap:9px">${mkAv(p.full_name,0,34)}<div><h3>${p.full_name}</h3><div style="font-size:0.74rem;color:var(--ink-3)">${p.role==='hr'?'HR':'Manager'}</div></div></div>
+  <button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;font-size:0.81rem">
+      <div><span style="font-size:0.64rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);display:block;margin-bottom:1px">Email</span>${p.email}</div>
+      <div><span style="font-size:0.64rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);display:block;margin-bottom:1px">Status</span>${p.is_active?'<span class="badge badge-green">Active</span>':'<span class="badge badge-gray">Inactive</span>'}</div>
+      <div><span style="font-size:0.64rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);display:block;margin-bottom:1px">Username</span>${p.username||'—'}</div>
+      <div><span style="font-size:0.64rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);display:block;margin-bottom:1px">Last Login</span>${p.last_login?new Date(p.last_login).toLocaleDateString():'—'}</div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+    ${isAdmin()?`<button class="btn btn-primary" onclick="closeModal();editUser('${p.id}')">Edit</button>`:''}
+  </div>`);
+};
 
 // ── Employees ──────────────────────────────────────────────
 async function rEmployees(){
