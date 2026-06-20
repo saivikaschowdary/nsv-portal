@@ -2493,6 +2493,11 @@ function loadHRDashboard(){
     const el=document.getElementById(id);
     if(el) el.style.display=p?.role==='manager'?'none':'';
   });
+  // Visa, Evaluations, Timesheets, Leave - hidden from Admin nav (use dashboard popups instead); still visible to HR and Manager
+  ['nav-visas','side-visas','nav-reviews','side-reviews','nav-timesheets','side-timesheets','nav-leaves','side-leaves'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display=p?.role==='admin'?'none':'';
+  });
 
   navigate('dashboard');
   setupRealtime();
