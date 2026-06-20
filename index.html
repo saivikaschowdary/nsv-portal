@@ -2902,7 +2902,33 @@ async function viewEmployee(empId){
       <div><span style="font-size:0.64rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);display:block;margin-bottom:1px">Status</span>${sBadge(e.status||'Active')}</div>
       <div><span style="font-size:0.64rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);display:block;margin-bottom:1px">Manager</span>${e.manager_name||'—'}</div>
       <div><span style="font-size:0.64rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);display:block;margin-bottom:1px">Join Date</span>${e.join_date||'—'}</div>
+      <div><span style="font-size:0.64rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);display:block;margin-bottom:1px">Phone</span>${e.phone||'—'}</div>
+      <div><span style="font-size:0.64rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);display:block;margin-bottom:1px">Location</span>${e.location||'—'}</div>
+      <div><span style="font-size:0.64rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);display:block;margin-bottom:1px">Work Mode</span>${e.work_mode||'—'}</div>
+      <div><span style="font-size:0.64rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);display:block;margin-bottom:1px">Working Hours</span>${e.working_hours||'—'}</div>
+      <div><span style="font-size:0.64rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);display:block;margin-bottom:1px">Preferred Name</span>${e.preferred_name||'—'}</div>
+      <div><span style="font-size:0.64rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);display:block;margin-bottom:1px">Country of Origin</span>${e.country_of_origin||'—'}</div>
     </div>
+    ${e.biography?`<div style="background:var(--surface-2);border-radius:9px;padding:11px;margin-bottom:9px">
+      <div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px">Biography</div>
+      <div style="font-size:0.81rem">${e.biography}</div>
+    </div>`:''}
+    ${(e.certifications||e.additional_skills)?`<div style="background:var(--surface-2);border-radius:9px;padding:11px;margin-bottom:9px">
+      ${e.certifications?`<div style="margin-bottom:8px"><div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:3px">Certifications</div><div style="font-size:0.81rem">${e.certifications}</div></div>`:''}
+      ${e.additional_skills?`<div><div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:3px">Skills</div><div style="font-size:0.81rem">${e.additional_skills}</div></div>`:''}
+    </div>`:''}
+    ${e.lca_duties?`<div style="background:var(--surface-2);border-radius:9px;padding:11px;margin-bottom:9px">
+      <div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:5px">LCA Job Duties</div>
+      <div style="font-size:0.81rem">${e.lca_duties}</div>
+    </div>`:''}
+    ${(e.emergency_name||e.emergency_phone)?`<div style="background:var(--surface-2);border-radius:9px;padding:11px;margin-bottom:9px">
+      <div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px">Emergency Contact</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.81rem">
+        <div><span style="font-size:0.62rem;color:var(--ink-3);display:block">Name</span>${e.emergency_name||'—'}</div>
+        <div><span style="font-size:0.62rem;color:var(--ink-3);display:block">Relationship</span>${e.emergency_rel||'—'}</div>
+        <div style="grid-column:1/-1"><span style="font-size:0.62rem;color:var(--ink-3);display:block">Phone</span>${e.emergency_phone||'—'}</div>
+      </div>
+    </div>`:''}
     <div style="background:var(--surface-2);border-radius:9px;padding:11px;margin-bottom:9px">
       <div style="font-size:0.64rem;font-weight:700;text-transform:uppercase;color:var(--ink-3);margin-bottom:8px">Leave Balance</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:0.78rem">
