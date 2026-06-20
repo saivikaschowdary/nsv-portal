@@ -2539,7 +2539,8 @@ window.sendMessage = async function(contactId){
 
   let attachment_url=null, attachment_name=null, attachment_type=null;
   if(file){
-    const path=`${tid()}/${currentUser.id}_${contactId}/${Date.now()}_${file.name}`;
+    const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+    const path=`${tid()}/${currentUser.id}_${contactId}/${Date.now()}_${safeName}`;
     const {error:upErr}=await sb.storage.from('message-attachments').upload(path,file);
     if(upErr){ showToast('Error uploading file: '+upErr.message); return; }
     const {data:urlData}=await sb.storage.from('message-attachments').createSignedUrl(path,604800);
