@@ -2493,8 +2493,14 @@ window.loadMessageThread = async function(contactId){
   if(list.length===0){ el.innerHTML='<div style="text-align:center;color:var(--ink-3);font-size:0.81rem;margin:auto">No messages yet. Say hello!</div>'; return; }
   el.innerHTML=list.map(m=>{
     const mine=m.sender_id===currentUser.id;
-    return`<div class="msg-bubble-wrap" data-content="${m.content.toLowerCase().replace(/"/g,'&quot;')}" style="align-self:${mine?'flex-start':'flex-end'};max-width:70%">
-      <div style="background:${mine?'var(--surface-2)':'var(--accent)'};color:${mine?'var(--ink)':'#fff'};padding:8px 12px;border-radius:${mine?'12px 12px 12px 2px':'12px 12px 2px 12px'};font-size:0.84rem">${m.content}</div>
+    return`<div class="msg-bubble-wrap" data-content="${m.content.toLowerCase().replace(/"/g,'&quot;')}" style="align-self:${mine?'flex-start':'flex-end'};max-width:70%;position:relative" onmouseover="${mine?`this.querySelector('.msg-actions').style.display='flex'`:''}" onmouseout="${mine?`this.querySelector('.msg-actions').style.display='none'`:''}">
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="background:${mine?'var(--surface-2)':'var(--accent)'};color:${mine?'var(--ink)':'#fff'};padding:8px 12px;border-radius:${mine?'12px 12px 12px 2px':'12px 12px 2px 12px'};font-size:0.84rem">${m.content}${m.edited?'<span style="font-size:0.65rem;opacity:0.6;margin-left:5px">(edited)</span>':''}</div>
+        ${mine?`<div class="msg-actions" style="display:none;gap:3px">
+          <button onclick="window.editMessage('${m.id}','${m.content.replace(/'/g,"\\'")}')" style="background:none;border:none;cursor:pointer;font-size:0.75rem;opacity:0.5;padding:2px" title="Edit">✏️</button>
+          <button onclick="window.deleteMessage('${m.id}')" style="background:none;border:none;cursor:pointer;font-size:0.75rem;opacity:0.5;padding:2px" title="Delete">🗑️</button>
+        </div>`:''}
+      </div>
       <div style="font-size:0.65rem;color:var(--ink-3);margin-top:2px;text-align:${mine?'left':'right'};display:flex;align-items:center;gap:4px;justify-content:${mine?'flex-start':'flex-end'}">
         <span>${new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span>
         ${mine?`<span style="color:${m.is_read?'var(--accent)':'var(--ink-3)'}">${m.is_read?'✓✓ Seen':'✓ Sent'}</span>`:''}
@@ -2550,6 +2556,22 @@ window.filterMessageThread = function(query){
   document.querySelectorAll('.msg-bubble-wrap').forEach(el=>{
     el.style.display=(!q || el.dataset.content.includes(q))?'':'none';
   });
+};
+
+
+window.editMessage = async function(msgId, currentContent){
+  const newContent = prompt('Edit message:', currentContent);
+  if(newContent===null || newContent.trim()===''||newContent===currentContent) return;
+  const {error}=await sb.from('messages').update({content:newContent.trim(),edited:true}).eq('id',msgId).eq('sender_id',currentUser.id);
+  if(error){ showToast('Error editing message: '+error.message); return; }
+  if(window._activeConvoId) await window.loadMessageThread(window._activeConvoId);
+};
+
+window.deleteMessage = async function(msgId){
+  if(!confirm('Delete this message?')) return;
+  const {error}=await sb.from('messages').delete().eq('id',msgId).eq('sender_id',currentUser.id);
+  if(error){ showToast('Error deleting message: '+error.message); return; }
+  if(window._activeConvoId) await window.loadMessageThread(window._activeConvoId);
 };
 
 async function platformNav(page){
