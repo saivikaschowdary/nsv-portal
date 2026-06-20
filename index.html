@@ -2546,6 +2546,52 @@ async function rDash(){
     sb.from('timesheets').select('id').eq('tenant_id',tid()).eq('status','Submitted'),
     sb.from('leave_requests').select('id').eq('tenant_id',tid()).eq('status','Pending')
   ]);
+
+  // Financial overview - admin only
+  let financialHTML='';
+  if(isAdmin()){
+    const {data:payrolls}=await sb.from('payroll').select('employee_id,amount,salary_type,billing_rate,contribution_401k,health_insurance').eq('tenant_id',tid());
+    const {data:approvedTs}=await sb.from('timesheets').select('employee_id,total_hours').eq('tenant_id',tid()).eq('status','Approved');
+
+    const payMap={};(payrolls||[]).forEach(p=>payMap[p.employee_id]=p);
+    const hoursByEmp={};(approvedTs||[]).forEach(t=>{ hoursByEmp[t.employee_id]=(hoursByEmp[t.employee_id]||0)+(t.total_hours||0); });
+
+    let totalRevenue=0, totalCost=0, benchCost=0, totalBenefits=0;
+    const empStatusList=er.data||[];
+    const benchIds=new Set(empStatusList.filter(e=>e.status==='Bench').map(e=>e.id));
+
+    Object.keys(hoursByEmp).forEach(empId=>{
+      const p=payMap[empId];
+      const hours=hoursByEmp[empId];
+      if(p){
+        const payRate=p.salary_type==='Hourly'?(p.amount||0):0;
+        const billRate=p.billing_rate||0;
+        totalRevenue += hours*billRate;
+        totalCost += hours*payRate;
+      }
+    });
+
+    (payrolls||[]).forEach(p=>{
+      totalBenefits += (p.health_insurance||0);
+      if(benchIds.has(p.employee_id) && p.salary_type==='Salary'){
+        benchCost += (p.amount||0)/12; // monthly cost estimate for benched salaried employees
+      }
+    });
+
+    const netMargin = totalRevenue - totalCost;
+    const marginPct = totalRevenue>0 ? ((netMargin/totalRevenue)*100).toFixed(1) : 0;
+
+    financialHTML = `
+    <div style="margin-bottom:20px">
+      <div style="font-size:0.95rem;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px">💰 Company Financial Overview</div>
+      <div class="metric-grid">
+        <div class="metric-card mc-green"><div class="metric-label">Total Revenue</div><div class="metric-val">$${totalRevenue.toLocaleString(undefined,{maximumFractionDigits:0})}</div><div class="metric-sub">From approved timesheets</div></div>
+        <div class="metric-card mc-blue"><div class="metric-label">Total Payroll Cost</div><div class="metric-val cv-blue">$${totalCost.toLocaleString(undefined,{maximumFractionDigits:0})}</div><div class="metric-sub">Hourly billed employees</div></div>
+        <div class="metric-card ${netMargin>=0?'mc-green':'mc-red'}"><div class="metric-label">Net Margin</div><div class="metric-val" style="color:${netMargin>=0?'var(--accent)':'var(--red)'}">$${netMargin.toLocaleString(undefined,{maximumFractionDigits:0})}</div><div class="metric-sub">${marginPct}% margin</div></div>
+        <div class="metric-card mc-amber"><div class="metric-label">Bench Cost (Monthly Est.)</div><div class="metric-val cv-amber">$${benchCost.toLocaleString(undefined,{maximumFractionDigits:0})}</div><div class="metric-sub">${benchIds.size} on bench</div></div>
+      </div>
+    </div>`;
+  }
   const emps=er.data||[], today=new Date();
   const total=emps.length, bench=emps.filter(e=>e.status==='Bench').length, active=emps.filter(e=>e.status==='Active').length;
   const pending=(rr.data||[]).length;
@@ -2565,6 +2611,7 @@ async function rDash(){
 
   return`<div class="page-header"><div><h2>Overview</h2><p>${currentTenant?.name||''} · <span class="realtime-dot"></span>Live</p></div><button class="btn btn-primary btn-sm" onclick="openAddEmployee()">+ Add Employee</button></div>
   <div class="page-body">
+    ${financialHTML}
     <div class="metric-grid">
       <div class="metric-card mc-green" style="cursor:pointer" onclick="showDashPopup('employees')"><div class="metric-label">Total Employees</div><div class="metric-val">${total}</div><div class="metric-sub">Click for overview →</div></div>
       <div class="metric-card mc-blue" style="cursor:pointer" onclick="showDashPopup('bench')"><div class="metric-label">On Bench</div><div class="metric-val cv-blue">${bench}</div><div class="metric-sub">${active} active · click for overview →</div></div>
