@@ -2853,7 +2853,11 @@ function loadHRDashboard(){
       if(currentPage==='messages' && window._activeConvoId) window.loadMessageThread(window._activeConvoId);
     }, 15000);
     // Update last_seen periodically
-    if(currentUser) sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',currentUser.id);
+    console.log('[DEBUG] About to check currentUser for last_seen, currentUser exists:', !!currentUser);
+    if(currentUser){
+      console.log('[DEBUG] Calling last_seen update for', currentUser.id);
+      sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',currentUser.id).then(r=>console.log('[DEBUG] last_seen immediate update result:',JSON.stringify(r))).catch(e=>console.log('[DEBUG] last_seen immediate update CAUGHT ERROR:',e));
+    }
     if(window._lastSeenTimer) clearInterval(window._lastSeenTimer);
     window._lastSeenTimer = setInterval(()=>{
       if(!currentUser){ clearInterval(window._lastSeenTimer); showScreen('screen-auth'); return; }
