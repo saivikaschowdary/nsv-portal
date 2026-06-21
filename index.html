@@ -2849,9 +2849,10 @@ function loadHRDashboard(){
       if(currentPage==='messages' && window._activeConvoId) window.loadMessageThread(window._activeConvoId);
     }, 15000);
     // Update last_seen periodically
-    sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',currentUser.id);
+    if(currentUser) sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',currentUser.id);
     if(window._lastSeenTimer) clearInterval(window._lastSeenTimer);
     window._lastSeenTimer = setInterval(()=>{
+      if(!currentUser){ clearInterval(window._lastSeenTimer); showScreen('screen-auth'); return; }
       sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',currentUser.id);
     }, 60000);
   }
