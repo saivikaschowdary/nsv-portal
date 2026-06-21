@@ -2440,10 +2440,19 @@ async function rMessages(){
     if(m.recipient_id===currentUser.id && !m.is_read) convoMap[otherId].unread++;
   });
 
-  return`<div class="page-header"><div><h2>Messages</h2><p>Internal staff messaging</p></div></div>
+  const {data:myGroups}=await sb.from('message_group_members').select('group_id, message_groups(id,name)').eq('profile_id',currentUser.id);
+  const groups=(myGroups||[]).map(g=>g.message_groups).filter(Boolean);
+
+  return`<div class="page-header"><div><h2>Messages</h2><p>Internal staff messaging</p></div><button class="btn btn-primary btn-sm" onclick="window.openCreateGroup()">+ New Group</button></div>
   <div class="page-body">
     <div style="display:grid;grid-template-columns:280px 1fr;gap:14px;height:calc(100vh - 180px)">
       <div class="card" style="overflow-y:auto">
+        ${groups.length>0?`<div style="padding:8px 14px;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);background:var(--surface-2)">Groups</div>
+        ${groups.map((g,i)=>`<div onclick="window.openGroupConversation('${g.id}','${g.name.replace(/'/g,"\\'")}')" id="group-${g.id}" style="padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer;display:flex;align-items:center;gap:9px" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
+          <div style="width:34px;height:34px;border-radius:50%;background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:0.85rem">👥</div>
+          <div style="flex:1;min-width:0"><span style="font-weight:500;font-size:0.83rem">${g.name}</span></div>
+        </div>`).join('')}
+        <div style="padding:8px 14px;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-3);background:var(--surface-2)">Direct Messages</div>`:''}
         ${contacts.length===0?'<div style="padding:20px;text-align:center;color:var(--ink-3);font-size:0.81rem">No other staff members yet.</div>':
         contacts.map((c,i)=>{
           const convo=convoMap[c.id];
@@ -2612,6 +2621,50 @@ window.deleteMessage = async function(msgId){
   const {error}=await sb.from('messages').delete().eq('id',msgId).eq('sender_id',currentUser.id);
   if(error){ showToast('Error deleting message: '+error.message); return; }
   if(window._activeConvoId) await window.loadMessageThread(window._activeConvoId);
+};
+
+
+window.openCreateGroup = async function(){
+  const {data:staff}=await sb.from('profiles').select('id,full_name,role').eq('tenant_id',tid()).in('role',['admin','hr','manager']).neq('id',currentUser.id).order('full_name');
+  const contacts=staff||[];
+  showModal(`
+  <div class="modal-header"><h3>New Group</h3><button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button></div>
+  <div class="modal-body">
+    <div class="form-group"><label>Group Name *</label><input id="grp-name" placeholder="e.g. Leadership Team"></div>
+    <div class="form-group"><label>Add Participants</label>
+      <div style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px">
+        ${contacts.length===0?'<div style="padding:10px;text-align:center;color:var(--ink-3);font-size:0.81rem">No other staff members available.</div>':
+        contacts.map(c=>`<label style="display:flex;align-items:center;gap:9px;padding:7px 6px;cursor:pointer;font-size:0.83rem">
+          <input type="checkbox" class="grp-member-cb" value="${c.id}">
+          <span>${c.full_name}</span><span style="color:var(--ink-3);font-size:0.74rem">(${c.role==='hr'?'HR':c.role.charAt(0).toUpperCase()+c.role.slice(1)})</span>
+        </label>`).join('')}
+      </div>
+    </div>
+    <div id="grp-err" style="display:none;background:var(--red-light);border-radius:8px;padding:9px 12px;font-size:0.79rem;color:var(--red);margin-top:9px"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" onclick="window.createGroup()">Create Group</button>
+  </div>`);
+};
+
+window.createGroup = async function(){
+  const name=document.getElementById('grp-name').value.trim();
+  const errEl=document.getElementById('grp-err');
+  const selected=[...document.querySelectorAll('.grp-member-cb:checked')].map(cb=>cb.value);
+  if(!name){ errEl.textContent='Group name is required.'; errEl.style.display='block'; return; }
+  if(selected.length===0){ errEl.textContent='Select at least one participant.'; errEl.style.display='block'; return; }
+
+  const {data:group,error}=await sb.from('message_groups').insert({tenant_id:tid(),name,created_by:currentUser.id}).select().single();
+  if(error){ errEl.textContent=error.message; errEl.style.display='block'; return; }
+
+  const members=[...selected, currentUser.id].map(pid=>({group_id:group.id,profile_id:pid}));
+  const {error:memErr}=await sb.from('message_group_members').insert(members);
+  if(memErr){ errEl.textContent='Group created but failed to add members: '+memErr.message; errEl.style.display='block'; return; }
+
+  closeModal();
+  showToast('✓ Group created.');
+  navigate('messages');
 };
 
 async function platformNav(page){
