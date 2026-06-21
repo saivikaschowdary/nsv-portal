@@ -2843,7 +2843,9 @@ function loadHRDashboard(){
   if(window._notifPollTimer) clearInterval(window._notifPollTimer);
   window._notifPollTimer = setInterval(loadNotifications, 30000);
   // Poll for unread messages
+  console.log('[DEBUG] p.role check:', p?.role, 'condition:', ['admin','hr','manager'].includes(p?.role));
   if(['admin','hr','manager'].includes(p?.role)){
+    console.log('[DEBUG] Entered messaging/lastSeen block');
     window.updateUnreadMsgBadge();
     if(window._msgPollTimer) clearInterval(window._msgPollTimer);
     window._msgPollTimer = setInterval(()=>{
