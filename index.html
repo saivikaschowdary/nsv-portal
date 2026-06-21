@@ -2799,8 +2799,6 @@ ${portalLink}`
 // HR DASHBOARD
 // ════════════════════════════════════════════════════════════
 function loadHRDashboard(){
-  window._loadHRDashCallCount = (window._loadHRDashCallCount||0)+1;
-  console.log('[DEBUG] loadHRDashboard called, count:', window._loadHRDashCallCount, 'at', new Date().toISOString());
   showScreen('screen-app');
   const t=currentTenant, p=currentProfile;
   document.getElementById('topnav-company').textContent  = t?.name||'Company';
@@ -2843,26 +2841,26 @@ function loadHRDashboard(){
   if(window._notifPollTimer) clearInterval(window._notifPollTimer);
   window._notifPollTimer = setInterval(loadNotifications, 30000);
   // Poll for unread messages
-  console.log('[DEBUG] p.role check:', p?.role, 'condition:', ['admin','hr','manager'].includes(p?.role));
   if(['admin','hr','manager'].includes(p?.role)){
-    console.log('[DEBUG] Entered messaging/lastSeen block');
     window.updateUnreadMsgBadge();
     if(window._msgPollTimer) clearInterval(window._msgPollTimer);
     window._msgPollTimer = setInterval(()=>{
       window.updateUnreadMsgBadge();
       if(currentPage==='messages' && window._activeConvoId) window.loadMessageThread(window._activeConvoId);
     }, 15000);
-    // Update last_seen periodically
-    console.log('[DEBUG] About to check currentUser for last_seen, currentUser exists:', !!currentUser);
-    if(currentUser){
-      console.log('[DEBUG] Calling last_seen update for', currentUser.id);
-      sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',currentUser.id).then(r=>console.log('[DEBUG] last_seen immediate update result:',JSON.stringify(r))).catch(e=>console.log('[DEBUG] last_seen immediate update CAUGHT ERROR:',e));
+    // Update last_seen periodically using recursive setTimeout (more reliable than setInterval)
+    if(window._lastSeenTimer) clearTimeout(window._lastSeenTimer);
+    function scheduleLastSeenUpdate(){
+      window._lastSeenTimer = setTimeout(async ()=>{
+        if(!currentUser){ showScreen('screen-auth'); return; }
+        await sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',currentUser.id);
+        scheduleLastSeenUpdate();
+      }, 60000);
     }
-    if(window._lastSeenTimer) clearInterval(window._lastSeenTimer);
-    window._lastSeenTimer = setInterval(()=>{
-      if(!currentUser){ clearInterval(window._lastSeenTimer); showScreen('screen-auth'); return; }
+    if(currentUser){
       sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',currentUser.id);
-    }, 60000);
+    }
+    scheduleLastSeenUpdate();
   }
 }
 
