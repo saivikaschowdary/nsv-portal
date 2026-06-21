@@ -2849,8 +2849,7 @@ function loadHRDashboard(){
       if(currentPage==='messages' && window._activeConvoId) window.loadMessageThread(window._activeConvoId);
     }, 15000);
     // Update last_seen periodically
-    console.log('[lastSeen DEBUG] About to update, currentUser:', currentUser, 'tid():', tid());
-    sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',currentUser.id).then(r=>console.log('[lastSeen DEBUG] result:',JSON.stringify(r)));
+    sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',currentUser.id);
     if(window._lastSeenTimer) clearInterval(window._lastSeenTimer);
     window._lastSeenTimer = setInterval(()=>{
       sb.from('profiles').update({last_seen:new Date().toISOString()}).eq('id',currentUser.id);
