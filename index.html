@@ -581,6 +581,10 @@ async function doSignOut(){
   if(window._empNotifPollTimer) clearInterval(window._empNotifPollTimer);
   if(window._msgPollTimer) clearInterval(window._msgPollTimer);
   if(window._lastSeenTimer) clearInterval(window._lastSeenTimer);
+  window._lastSeenTimer = null;
+  window._seenMsgIds = null;
+  currentUser = null;
+  currentProfile = null;
   await sb.auth.signOut();
   // Clear all login fields
   const fields = ['login-email','login-password','mgr-email','mgr-password','portal-email','portal-password'];
